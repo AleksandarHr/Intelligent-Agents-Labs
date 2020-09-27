@@ -4,6 +4,9 @@ import uchicago.src.sim.engine.SimInit;
 import uchicago.src.sim.gui.DisplaySurface;
 import uchicago.src.sim.gui.ColorMap;
 import uchicago.src.sim.gui.Value2DDisplay;
+import uchicago.src.sim.gui.Object2DDisplay;
+import uchicago.src.sim.engine.BasicAction;
+import uchicago.src.sim.util.SimUtilities;
 
 import java.awt.Color;
 import java.util.ArrayList;
@@ -50,6 +53,7 @@ public class RabbitsGrassSimulationModel extends SimModelImpl {
 
 		public void begin() {
 			this.buildModel();
+			this.buildSchedule();
 			this.buildDisplay();
 			
 			displaySurface.display();
@@ -59,11 +63,12 @@ public class RabbitsGrassSimulationModel extends SimModelImpl {
 			// setup simulation space
 			this.rabbitsGrassSpace = null;
 			this.rabbits = new ArrayList();
+			this.schedule = new Schedule(1);
 			
 			// setup display surface
 		    if (displaySurface != null){
 		    	displaySurface.dispose();
-		      }
+		    }
 		    displaySurface = null;
 		    displaySurface = new DisplaySurface(this, "Rabbits Grass Simulation Window");
 		    registerDisplaySurface("Rabbits Grass Simulation Window", displaySurface);
@@ -79,11 +84,9 @@ public class RabbitsGrassSimulationModel extends SimModelImpl {
 		}
 		
 		private void addNewRabbit() {
-			int rabbitX = (int)(Math.random()*(this.gridSize));
-		    int rabbitY = (int)(Math.random()*(this.gridSize));
-		    RabbitsGrassSimulationAgent rabbit = new RabbitsGrassSimulationAgent(rabbitX, rabbitY, this.initialEnergy);
-		    
+		    RabbitsGrassSimulationAgent rabbit = new RabbitsGrassSimulationAgent(this.initialEnergy);
 		    this.rabbits.add(rabbit);
+		    rabbitsGrassSpace.addAgent(rabbit);
 		}
 		
 		public void buildDisplay() {
@@ -92,8 +95,46 @@ public class RabbitsGrassSimulationModel extends SimModelImpl {
 			map.mapColor(0, Color.white);
 			map.mapColor(1, Color.green);
 			
-			Value2DDisplay displayRabbitsGrass = new Value2DDisplay(rabbitsGrassSpace.getCurrentSpace(), map);
-			displaySurface.addDisplayable(displayRabbitsGrass, "Rabbits Grass");
+			Value2DDisplay displayGrass = new Value2DDisplay(rabbitsGrassSpace.getCurrentGrassSpace(), map);
+			displaySurface.addDisplayable(displayGrass, "Rabbits Grass");
+
+			Object2DDisplay displayAgents = new Object2DDisplay(rabbitsGrassSpace.getCurrentRabbitsSpace());
+			displayAgents.setObjectList(rabbits);
+
+			displaySurface.addDisplayable(displayGrass, "Money");
+			displaySurface.addDisplayable(displayAgents, "Agents");
+		}
+		
+		public void buildSchedule() {
+			class RabbitsGrassStep extends BasicAction {
+				public void execute() {
+					SimUtilities.shuffle(rabbits);
+					for (int i = 0; i < rabbits.size(); i++) {
+						RabbitsGrassSimulationAgent rabbit = (RabbitsGrassSimulationAgent)rabbits.get(i);
+						rabbit.step();
+					}
+					
+					int deadRabbits = removeDeadRabbits();
+					
+					displaySurface.updateDisplay();
+				}
+			}
+			
+			schedule.scheduleActionBeginning(0, new RabbitsGrassStep());
+		}
+		
+		private int removeDeadRabbits() {
+			int count = 0;
+			for (int i = 0; i < rabbits.size(); i++) {
+				RabbitsGrassSimulationAgent rabbit = (RabbitsGrassSimulationAgent)rabbits.get(i);
+				if (rabbit.getEnergy() < 1) {
+					rabbitsGrassSpace.removeAgentAt(rabbit.getX(), rabbit.getY());
+					rabbits.remove(i);
+					count++;
+				}
+			}
+			
+			return count;
 		}
 		
 		public String[] getInitParam() {

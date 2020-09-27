@@ -24,18 +24,19 @@ import java.util.ArrayList;
 public class RabbitsGrassSimulationModel extends SimModelImpl {		
 	
 		private static final int DEFAULTGRIDSIZE = 20;
+		
 		private int gridSize = DEFAULTGRIDSIZE;
-		private int numInitRabbits;
-		private int numInitGrass;
-		private int grassGrowthRate;
-		private int birthThreshold;
-		private int initialEnergy;
+		private int numInitRabbits = 10;
+		private int numInitGrass = 10;
+		private int grassGrowthRate = 5;
+		private int birthThreshold = 5;
+		private int initialEnergy = 10;
 		
 		private Schedule schedule;
 		
 		private RabbitsGrassSimulationSpace rabbitsGrassSpace;
 		private DisplaySurface displaySurface;
-		private ArrayList rabbits;
+		private ArrayList<RabbitsGrassSimulationAgent> rabbits;
 		
 		public static void main(String[] args) {
 			
@@ -62,14 +63,16 @@ public class RabbitsGrassSimulationModel extends SimModelImpl {
 		public void setup() {
 			// setup simulation space
 			this.rabbitsGrassSpace = null;
-			this.rabbits = new ArrayList();
+			this.rabbits = new ArrayList<RabbitsGrassSimulationAgent>();
 			this.schedule = new Schedule(1);
 			
-			// setup display surface
+			// remove display
 		    if (displaySurface != null){
 		    	displaySurface.dispose();
 		    }
 		    displaySurface = null;
+		    
+		    // reinitialize display
 		    displaySurface = new DisplaySurface(this, "Rabbits Grass Simulation Window");
 		    registerDisplaySurface("Rabbits Grass Simulation Window", displaySurface);
 		}
@@ -91,8 +94,7 @@ public class RabbitsGrassSimulationModel extends SimModelImpl {
 		
 		public void buildDisplay() {
 			ColorMap map = new ColorMap();
-			map.mapColor(-1, Color.black);
-			map.mapColor(0, Color.white);
+			map.mapColor(0, Color.black);
 			map.mapColor(1, Color.green);
 			
 			Value2DDisplay displayGrass = new Value2DDisplay(rabbitsGrassSpace.getCurrentGrassSpace(), map);

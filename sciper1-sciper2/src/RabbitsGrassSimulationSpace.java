@@ -2,19 +2,21 @@
  * Class that implements the simulation space of the rabbits grass simulation.
  * @author 
  */
-import uchicago.src.sim.space.Object2DTorus;
+import uchicago.src.sim.space.Object2DGrid;
 
 public class RabbitsGrassSimulationSpace {
-	private Object2DTorus grassSpace;
-	private Object2DTorus rabbitsSpace;
+	private Object2DGrid grassSpace;
+	private Object2DGrid rabbitsSpace;
 	
 	public RabbitsGrassSimulationSpace (int size) {
-		this.grassSpace = new Object2DTorus(size, size);
-		this.rabbitsSpace = new Object2DTorus(size, size);
-	}
-	
-	public void generateRabbits(int numInitRabbits) {
-
+		this.grassSpace = new Object2DGrid(size, size);
+		this.rabbitsSpace = new Object2DGrid(size, size);
+		
+		for (int x = 0; x < size; x++) {
+			for (int y = 0; y < size; y++) {
+				grassSpace.putObjectAt(x, y, new Integer(0));
+			}
+		}
 	}
 	
 	public void generateGrass(int numInitGrass) {
@@ -23,9 +25,7 @@ public class RabbitsGrassSimulationSpace {
 		    int grassY = (int)(Math.random()*(grassSpace.getSizeY()));
 		      
 		    // Try to place grass patch on a random coordinate
-		    if(this.grassSpace.getObjectAt(grassX, grassY) == null) {
-		    	grassSpace.putObjectAt(grassX, grassY, new Integer(1));
-		    }
+		    grassSpace.putObjectAt(grassX, grassY, new Integer(1));
 		}
 	}
 	
@@ -44,22 +44,50 @@ public class RabbitsGrassSimulationSpace {
 		    if(isAgentSpaceCellOccupied(x,y) == false){
 		    	rabbitsSpace.putObjectAt(x,y,agent);
 		        agent.setCoordinates(x,y);
+		        agent.setRabbitsGrassSpace(this);
 		        added = true;
 		    }
 		}
 		return added;
 	}
-	
-	public Object2DTorus getCurrentGrassSpace() {
-		return this.grassSpace;
-	}
-	
-	public Object2DTorus getCurrentRabbitsSpace() {
-		return this.rabbitsSpace;
-	}
 
 	public void removeAgentAt(int x, int y) {
 		this.rabbitsSpace.putObjectAt(x, y, null);
+	}
+	
+	public int eatGrassAt(int x, int y) {
+		if (this.grassSpace.getObjectAt(x, y) != null) {
+			int grass = (Integer) this.grassSpace.getObjectAt(x, y);
+			this.grassSpace.putObjectAt(x, y, new Integer(0));
+			return grass;
+		}
+		return 0;
+	}
+	
+	/*
+	 * Tries to perform a rabbit movement, returns true if successfull and false otherwise
+	 */
+	public boolean moveRabbitTo(int x, int y, int newX, int newY) {
+		boolean moveSuccessful = false;
+		
+		if (!this.isAgentSpaceCellOccupied(newX, newY)) {
+			RabbitsGrassSimulationAgent rabbit = (RabbitsGrassSimulationAgent)this.rabbitsSpace.getObjectAt(x, y);
+			this.removeAgentAt(x, y);
+			rabbit.setCoordinates(newX, newY);
+			this.rabbitsSpace.putObjectAt(newX, newY, rabbit);
+			moveSuccessful = true;
+		}
+		
+		return moveSuccessful;
+	}
+	
+	// Getters
+	public Object2DGrid getCurrentGrassSpace() {
+		return this.grassSpace;
+	}
+	
+	public Object2DGrid getCurrentRabbitsSpace() {
+		return this.rabbitsSpace;
 	}
 	
 }

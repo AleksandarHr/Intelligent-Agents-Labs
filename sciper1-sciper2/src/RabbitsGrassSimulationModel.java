@@ -29,7 +29,7 @@ public class RabbitsGrassSimulationModel extends SimModelImpl {
 		private int numInitRabbits = 10;
 		private int numInitGrass = 10;
 		private int grassGrowthRate = 5;
-		private int birthThreshold = 5;
+		private int birthThreshold = 10;
 		private int initialEnergy = 10;
 		
 		private Schedule schedule;
@@ -103,7 +103,7 @@ public class RabbitsGrassSimulationModel extends SimModelImpl {
 			Object2DDisplay displayAgents = new Object2DDisplay(rabbitsGrassSpace.getCurrentRabbitsSpace());
 			displayAgents.setObjectList(rabbits);
 
-			displaySurface.addDisplayable(displayGrass, "Money");
+			displaySurface.addDisplayable(displayGrass, "Grass");
 			displaySurface.addDisplayable(displayAgents, "Agents");
 		}
 		
@@ -111,12 +111,19 @@ public class RabbitsGrassSimulationModel extends SimModelImpl {
 			class RabbitsGrassStep extends BasicAction {
 				public void execute() {
 					SimUtilities.shuffle(rabbits);
-					for (int i = 0; i < rabbits.size(); i++) {
+					int rabbits_size = rabbits.size();
+					for (int i = 0; i < rabbits_size ; i++) {
 						RabbitsGrassSimulationAgent rabbit = (RabbitsGrassSimulationAgent)rabbits.get(i);
 						rabbit.step();
+						//A rabbit is born at random location if the energy is sufficient
+						if(rabbit.getEnergy() > birthThreshold){
+							addNewRabbit();
+						}
 					}
-					
+					//Grow grass
+					rabbitsGrassSpace.growGrass(grassGrowthRate);
 					int deadRabbits = removeDeadRabbits();
+					
 					
 					displaySurface.updateDisplay();
 				}

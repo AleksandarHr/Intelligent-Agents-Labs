@@ -3,6 +3,7 @@ import uchicago.src.sim.gui.SimGraphics;
 import java.awt.Color;
 
 import uchicago.src.sim.gui.Drawable;
+import uchicago.src.sim.util.Random;
 import uchicago.src.sim.gui.SimGraphics;
 import uchicago.src.sim.space.Object2DGrid;
 
@@ -29,12 +30,15 @@ public class RabbitsGrassSimulationAgent implements Drawable {
 		this.energy = initialEnergy;
 	}
 	
-	private void setMoveXMoveY() {
+	private void setMoveXMoveY() {	
 		this.moveX = 0;
 		this.moveY = 0;
-		while ((moveX == 0) && (moveY == 0)) {
+		while ((moveX == 0 && moveY == 0) || (moveX != 0 && moveY != 0)) {
+			Random.createUniform();
 			moveX = (int)Math.floor(Math.random() * 3) - 1;
 			moveY = (int)Math.floor(Math.random() * 3) - 1;
+			//moveX = Random.uniform.nextIntFromTo(-1, 1);
+			//moveY = Random.uniform.nextIntFromTo(-1, 1);
 		}
 	}
 	
@@ -44,6 +48,7 @@ public class RabbitsGrassSimulationAgent implements Drawable {
 
 	public void step() {
 		// Move agent
+		this.setMoveXMoveY();
 		int newX = x + moveX;
 		int newY = y + moveY;
 		
@@ -53,8 +58,6 @@ public class RabbitsGrassSimulationAgent implements Drawable {
 		
 		if (tryMoveRabbit(newX, newY)) {
 			this.energy += this.rabbitsGrassSpace.eatGrassAt(x, y);			
-		} else {
-			this.setMoveXMoveY();
 		}
 		
 		this.energy--;

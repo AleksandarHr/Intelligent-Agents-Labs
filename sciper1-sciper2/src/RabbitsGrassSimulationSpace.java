@@ -29,8 +29,23 @@ public class RabbitsGrassSimulationSpace {
 		}
 	}
 	
+	public void growGrass(int grassGrowthRate) {
+		for (int i = 0; i < grassGrowthRate; i++) {
+			int grassX = (int)(Math.random()*(grassSpace.getSizeX()));
+		    int grassY = (int)(Math.random()*(grassSpace.getSizeY()));
+		      
+		    // Try to place grass patch on a random coordinate
+		    //If Grass is already there, do nothing
+		    this.grassSpace.putObjectAt(grassX, grassY, new Integer(1));
+		}
+	}
+	
 	private boolean isAgentSpaceCellOccupied (int x, int y) {
 		return rabbitsSpace.getObjectAt(x, y) != null;
+	}
+	
+	private boolean isGrassSpaceCellOccupied (int x, int y) {
+		return grassSpace.getObjectAt(x, y) != null;
 	}
 	
 	public boolean addAgent(RabbitsGrassSimulationAgent agent) {
@@ -59,7 +74,8 @@ public class RabbitsGrassSimulationSpace {
 		if (this.grassSpace.getObjectAt(x, y) != null) {
 			int grass = (Integer) this.grassSpace.getObjectAt(x, y);
 			this.grassSpace.putObjectAt(x, y, new Integer(0));
-			return grass;
+			//return grass;
+			return 1;
 		}
 		return 0;
 	}

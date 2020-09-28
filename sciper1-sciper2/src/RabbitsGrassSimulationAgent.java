@@ -15,6 +15,7 @@ import uchicago.src.sim.space.Object2DGrid;
 
 public class RabbitsGrassSimulationAgent implements Drawable {
 
+	// Class variables to keep track of agent's position, movement and energy
 	private int x;
 	private int y;
 	private int moveX;
@@ -26,16 +27,19 @@ public class RabbitsGrassSimulationAgent implements Drawable {
 	
 	private RabbitsGrassSimulationSpace rabbitsGrassSpace;
 	
+	// Constructor for the agent object
 	public RabbitsGrassSimulationAgent(int initialEnergy) {
 		this.x = -1;
 		this.y = -1;
-		setMoveXMoveY();
 		this.energy = initialEnergy;
 		
 		this.IDNumber++;
 		this.ID = IDNumber;
 	}
 	
+	/*
+	 * Randomly choose a direction to move the agent - up/down/left/right
+	 */
 	private void setMoveXMoveY() {	
 		this.moveX = 0;
 		this.moveY = 0;
@@ -43,8 +47,6 @@ public class RabbitsGrassSimulationAgent implements Drawable {
 			Random.createUniform();
 			moveX = (int)Math.floor(Math.random() * 3) - 1;
 			moveY = (int)Math.floor(Math.random() * 3) - 1;
-			//moveX = Random.uniform.nextIntFromTo(-1, 1);
-			//moveY = Random.uniform.nextIntFromTo(-1, 1);
 		}
 	}
 	
@@ -52,6 +54,12 @@ public class RabbitsGrassSimulationAgent implements Drawable {
 		G.drawFastRoundRect(Color.white);
 	}
 
+	/*
+	 * Step function implements the agent's behavior on every tick of the simulation
+	 * 		Try to move to a random neighboring cell
+	 * 		If there is any grass on the new cell eat it and increase energy
+	 * 		Decrement energy due to the step made
+	 */
 	public void step() {
 		// Move agent
 		this.setMoveXMoveY();
@@ -69,12 +77,28 @@ public class RabbitsGrassSimulationAgent implements Drawable {
 		this.energy--;
 	}
 	
-	// Try to move the agent to new coordinates
+	/*
+	 * Try to move the agent to (newX, newY) coordinates
+	 * Return true if move was successful, false otherwise
+	 */
 	private boolean tryMoveRabbit(int newX, int newY) {
 		return this.rabbitsGrassSpace.moveRabbitTo(x, y, newX, newY);
 	}
 	
-	// Getters and Setters
+	/*
+	 * Reports agent's ID, current location's coordinates, and current energy
+	 */
+	public void report() {
+		System.out.println(this.getID() + 
+							" at " +
+							x + ", " + y + 
+							" has " + 
+							this.getEnergy() + " energy left.");
+	}
+	
+	/*
+	 * Getters and Setters section
+	 */
 	public int getX() {
 		return this.x;
 	}
@@ -102,13 +126,5 @@ public class RabbitsGrassSimulationAgent implements Drawable {
 	
 	public String getID() {
 		return "Rabbit-" + ID;
-	}
-	
-	public void report() {
-		System.out.println(this.getID() + 
-							" at " +
-							x + ", " + y + 
-							" has " + 
-							this.getEnergy() + " energy left.");
 	}
 }

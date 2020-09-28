@@ -23,6 +23,7 @@ import java.util.ArrayList;
 
 public class RabbitsGrassSimulationModel extends SimModelImpl {		
 	
+		// Default values for GUI variables
 		private static final int DEFAULTGRIDSIZE = 20;
 		private static final int DEFAULTINITRABBITS = 10;
 		private static final int DEFAULTINITGRASS = 10;
@@ -32,6 +33,7 @@ public class RabbitsGrassSimulationModel extends SimModelImpl {
 		private static final int DEFAULTMAXGRASSENERGY = 15;
 		private static final int DEFAULTMAXINITIALGRASSENERGY = 5;
 		
+		// Initialize variables to their default values
 		private int gridSize = DEFAULTGRIDSIZE;
 		private int numInitRabbits = DEFAULTINITRABBITS;
 		private int numInitGrass = DEFAULTINITGRASS;
@@ -41,12 +43,15 @@ public class RabbitsGrassSimulationModel extends SimModelImpl {
 		private int maxGrassEnergy = DEFAULTMAXGRASSENERGY;
 		private int maxInitialGrassEnergy = DEFAULTMAXINITIALGRASSENERGY;
 		
+		private String simulationName = "Rabbits Grass Simulation";
+		
 		private Schedule schedule;
 		
 		private RabbitsGrassSimulationSpace rabbitsGrassSpace;
 		private DisplaySurface displaySurface;
 		private ArrayList<RabbitsGrassSimulationAgent> rabbits;
 		
+		// Main function to kick off the simulation
 		public static void main(String[] args) {
 			
 			System.out.println("Rabbit skeleton");
@@ -61,6 +66,7 @@ public class RabbitsGrassSimulationModel extends SimModelImpl {
 			
 		}
 
+		// Calls functions to build the model, schedule, and display
 		public void begin() {
 			this.buildModel();
 			this.buildSchedule();
@@ -75,37 +81,48 @@ public class RabbitsGrassSimulationModel extends SimModelImpl {
 			this.rabbits = new ArrayList<RabbitsGrassSimulationAgent>();
 			this.schedule = new Schedule(1);
 			
-			// remove display
+			// Nullify current display if not null
 		    if (displaySurface != null){
 		    	displaySurface.dispose();
 		    }
 		    displaySurface = null;
 		    
-		    // reinitialize display
+		    // Reinitialize display
 		    displaySurface = new DisplaySurface(this, "Rabbits Grass Simulation Window");
 		    registerDisplaySurface("Rabbits Grass Simulation Window", displaySurface);
 		}
 		
+		/*
+		 * Builds simulation model - generates initial grass patches, initializes initial rabbits
+		 */
 		public void buildModel() {
 			this.rabbitsGrassSpace = new RabbitsGrassSimulationSpace(this.gridSize);
+
+			// Generate initial grass patches
 			this.rabbitsGrassSpace.generateGrass(this.numInitGrass, this.maxGrassEnergy);
 
+			// Generate initial rabbit agents
 			for (int i = 0; i < this.numInitRabbits; i++) {
 				addNewRabbit();
 			}
 			
+			// Agents report
 			for (int i = 0; i < this.rabbits.size(); i++) {
 				RabbitsGrassSimulationAgent rabbit = (RabbitsGrassSimulationAgent)this.rabbits.get(i);
 				rabbit.report();
 			}
 		}
 		
+		// Creates a new rabbit agents with initial energy and adds it to the list of agents and simulation space
 		private void addNewRabbit() {
 		    RabbitsGrassSimulationAgent rabbit = new RabbitsGrassSimulationAgent(this.initialEnergy);
 		    this.rabbits.add(rabbit);
 		    rabbitsGrassSpace.addAgent(rabbit);
 		}
 		
+		/*
+		 * Builds display - initializes color map and 2D agent & grass displays 
+		 */
 		public void buildDisplay() {
 			ColorMap map = new ColorMap();
 			map.mapColor(0, Color.black);
@@ -124,26 +141,33 @@ public class RabbitsGrassSimulationModel extends SimModelImpl {
 			displaySurface.addDisplayableProbeable(displayAgents, "Agents");
 		}
 		
+		/*
+		 * Builds simulation schedule
+		 */
 		public void buildSchedule() {
 			class RabbitsGrassStep extends BasicAction {
 				public void execute() {
+					// Ensure that agents move in random order
 					SimUtilities.shuffle(rabbits);
 					int rabbitsCount = rabbits.size();
 					int newBornRabbits = 0;
 					
 					for (int i = 0; i < rabbitsCount ; i++) {
+						// Perform single step for every rabbit agent
 						RabbitsGrassSimulationAgent rabbit = (RabbitsGrassSimulationAgent)rabbits.get(i);
 						rabbit.step();
 						
-						//A rabbit is born at random location if the energy is sufficient
+						// If the energy is sufficient, a rabbit is born at a random location
 						if( rabbit.getEnergy() > birthThreshold){
 							addNewRabbit();
 							newBornRabbits++;
 						}
 					}
 					
-					//Grow grass
+					// Generate grass at given growth rate
 					rabbitsGrassSpace.generateGrass(grassGrowthRate, maxGrassEnergy);
+					
+					// Eliminate agents with low energy (e.g. energy < 1)
 					int deadRabbits = removeDeadRabbits();
 					
 					displaySurface.updateDisplay();
@@ -153,6 +177,9 @@ public class RabbitsGrassSimulationModel extends SimModelImpl {
 			schedule.scheduleActionBeginning(0, new RabbitsGrassStep());
 		}
 		
+		/*
+		 * Remove rabbit agents with low energy (e.g. energy < 1)
+		 */
 		private int removeDeadRabbits() {
 			int count = 0;
 			for (int i = rabbits.size() - 1; i >= 0; i--) {
@@ -164,20 +191,22 @@ public class RabbitsGrassSimulationModel extends SimModelImpl {
 				}
 			}
 			
+			// Return number of dead rabbits
 			return count;
 		}
 		
 		public String[] getInitParam() {
-			// TODO Auto-generated method stub
 			// Parameters to be set by users via the Repast UI slider bar
 			// Do "not" modify the parameters names provided in the skeleton code, you can add more if you want 
 			String[] params = { "GridSize", "NumInitRabbits", "NumInitGrass", "GrassGrowthRate", "BirthThreshold", "InitialEnergy", "MaxGrassEnergy", "MaxInitialGrassEnergy"};
 			return params;
 		}
-
+		
+		/*
+		 * Getters and Setters section
+		 */
 		public String getName() {
-			// TODO Auto-generated method stub
-			return null;
+			return this.simulationName;
 		}
 
 		public Schedule getSchedule() {

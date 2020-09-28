@@ -143,6 +143,5 @@ public class RabbitsGrassSimulationSpace {
 			}
 		}
 		return totalEnergy;
-	}
-	
+	}	
 }

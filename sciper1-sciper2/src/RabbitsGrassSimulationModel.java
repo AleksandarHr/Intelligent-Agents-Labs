@@ -67,6 +67,25 @@ public class RabbitsGrassSimulationModel extends SimModelImpl {
 			}
 		}
 		
+		class rabbitEnergyPresent implements DataSource, Sequence {
+			
+			public Object execute() {
+				return new Double(getSValue());
+			}
+			
+			public double getSValue() {
+				return (double)this.getRabbitEnergy();
+			}
+			
+			private double getRabbitEnergy() {
+				double totalEnergy = 0.0;
+				for (int i = 0; i < rabbits.size(); i ++) {
+					totalEnergy += (double)rabbits.get(i).getEnergy();
+				}
+				
+				return totalEnergy;
+			}
+		}
 		
 		// Main function to kick off the simulation
 		public static void main(String[] args) {
@@ -168,6 +187,7 @@ public class RabbitsGrassSimulationModel extends SimModelImpl {
 			displaySurface.addDisplayableProbeable(displayAgents, "Agents");
 		
 			this.totalGrassEnergyAvailable.addSequence("Grass Energy", new grassEnergyAvailable());
+			this.totalGrassEnergyAvailable.addSequence("Rabbit Energy", new rabbitEnergyPresent());
 		}
 		
 		/*

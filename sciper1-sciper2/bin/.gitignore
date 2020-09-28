@@ -1,3 +1,5 @@
 /RabbitsGrassSimulationModel$grassEnergyAvailable.class
 /RabbitsGrassSimulationModel$1RabbitsGrassStep.class
 /RabbitsGrassSimulationModel$1RabbitsGrassUpdateTotalGrassEnergy.class
+/RabbitsGrassSimulationModel$rabbitEnergyPresent.class
+/RabbitsGrassSimulationModel$1RabbitsGrassUpdateTotalRabbitEnergy.class

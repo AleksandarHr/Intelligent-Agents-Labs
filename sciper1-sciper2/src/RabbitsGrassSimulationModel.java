@@ -24,13 +24,22 @@ import java.util.ArrayList;
 public class RabbitsGrassSimulationModel extends SimModelImpl {		
 	
 		private static final int DEFAULTGRIDSIZE = 20;
+		private static final int DEFAULTINITRABBITS = 10;
+		private static final int DEFAULTINITGRASS = 10;
+		private static final int DEFAULTGRASSGROWTHRATE = 5;
+		private static final int DEFAULTBIRTHTHRESHOLD = 10;
+		private static final int DEFAULTINITENERGY = 10;
+		private static final int DEFAULTMAXGRASSENERGY = 15;
+		private static final int DEFAULTMAXINITIALGRASSENERGY = 5;
 		
 		private int gridSize = DEFAULTGRIDSIZE;
-		private int numInitRabbits = 10;
-		private int numInitGrass = 10;
-		private int grassGrowthRate = 5;
-		private int birthThreshold = 10;
-		private int initialEnergy = 10;
+		private int numInitRabbits = DEFAULTINITRABBITS;
+		private int numInitGrass = DEFAULTINITGRASS;
+		private int grassGrowthRate = DEFAULTGRASSGROWTHRATE;
+		private int birthThreshold = DEFAULTBIRTHTHRESHOLD;
+		private int initialEnergy = DEFAULTINITENERGY;
+		private int maxGrassEnergy = DEFAULTMAXGRASSENERGY;
+		private int maxInitialGrassEnergy = DEFAULTMAXINITIALGRASSENERGY;
 		
 		private Schedule schedule;
 		
@@ -79,7 +88,7 @@ public class RabbitsGrassSimulationModel extends SimModelImpl {
 		
 		public void buildModel() {
 			this.rabbitsGrassSpace = new RabbitsGrassSimulationSpace(this.gridSize);
-			this.rabbitsGrassSpace.generateGrass(this.numInitGrass);
+			this.rabbitsGrassSpace.generateGrass(this.numInitGrass, this.maxGrassEnergy);
 
 			for (int i = 0; i < this.numInitRabbits; i++) {
 				addNewRabbit();
@@ -95,7 +104,10 @@ public class RabbitsGrassSimulationModel extends SimModelImpl {
 		public void buildDisplay() {
 			ColorMap map = new ColorMap();
 			map.mapColor(0, Color.black);
-			map.mapColor(1, Color.green);
+			
+			for(int i = 1; i <= this.maxGrassEnergy; i++) {
+				map.mapColor(i, 0, i * (1.0 / this.maxGrassEnergy), 0);
+			}
 			
 			Value2DDisplay displayGrass = new Value2DDisplay(rabbitsGrassSpace.getCurrentGrassSpace(), map);
 			displaySurface.addDisplayable(displayGrass, "Rabbits Grass");
@@ -121,9 +133,8 @@ public class RabbitsGrassSimulationModel extends SimModelImpl {
 						}
 					}
 					//Grow grass
-					rabbitsGrassSpace.growGrass(grassGrowthRate);
+					rabbitsGrassSpace.generateGrass(grassGrowthRate, maxGrassEnergy);
 					int deadRabbits = removeDeadRabbits();
-					
 					
 					displaySurface.updateDisplay();
 				}
@@ -150,7 +161,7 @@ public class RabbitsGrassSimulationModel extends SimModelImpl {
 			// TODO Auto-generated method stub
 			// Parameters to be set by users via the Repast UI slider bar
 			// Do "not" modify the parameters names provided in the skeleton code, you can add more if you want 
-			String[] params = { "GridSize", "NumInitRabbits", "NumInitGrass", "GrassGrowthRate", "BirthThreshold", "InitialEnergy"};
+			String[] params = { "GridSize", "NumInitRabbits", "NumInitGrass", "GrassGrowthRate", "BirthThreshold", "InitialEnergy", "MaxGrassEnergy", "MaxInitialGrassEnergy"};
 			return params;
 		}
 
@@ -211,4 +222,19 @@ public class RabbitsGrassSimulationModel extends SimModelImpl {
 			this.initialEnergy = energy;
 		}
 		
+		public int getMaxGrassEnergy() {
+			return this.maxGrassEnergy;
+		}
+		
+		public void setMaxGrassEnergy(int maxEnergy) {
+			this.maxGrassEnergy = maxEnergy;
+		}
+		
+		public int getMaxInitialGrassEnergy() {
+			return this.maxInitialGrassEnergy;
+		}
+		
+		public void setMaxInitialGrassEnergy(int maxEnergy) {
+			this.maxInitialGrassEnergy = maxEnergy;
+		}
 }

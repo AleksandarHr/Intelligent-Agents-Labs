@@ -57,7 +57,7 @@ public class RabbitsGrassSimulationAgent implements Drawable {
 		newY = (newY + grid.getSizeY()) % grid.getSizeY();
 		
 		if (tryMoveRabbit(newX, newY)) {
-			this.energy += this.rabbitsGrassSpace.eatGrassAt(x, y);			
+			this.energy += this.rabbitsGrassSpace.eatGrassAt(x, y);	
 		}
 		
 		this.energy--;

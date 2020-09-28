@@ -19,24 +19,18 @@ public class RabbitsGrassSimulationSpace {
 		}
 	}
 	
-	public void generateGrass(int numInitGrass) {
+	public void generateGrass(int numInitGrass, int maxGrassEnergy) {
 		for (int i = 0; i < numInitGrass; i++) {
 			int grassX = (int)(Math.random()*(grassSpace.getSizeX()));
 		    int grassY = (int)(Math.random()*(grassSpace.getSizeY()));
+		    int grassEnergy = (int)(Math.random()*maxGrassEnergy) + 1;
 		      
 		    // Try to place grass patch on a random coordinate
-		    grassSpace.putObjectAt(grassX, grassY, new Integer(1));
-		}
-	}
-	
-	public void growGrass(int grassGrowthRate) {
-		for (int i = 0; i < grassGrowthRate; i++) {
-			int grassX = (int)(Math.random()*(grassSpace.getSizeX()));
-		    int grassY = (int)(Math.random()*(grassSpace.getSizeY()));
-		      
-		    // Try to place grass patch on a random coordinate
-		    //If Grass is already there, do nothing
-		    this.grassSpace.putObjectAt(grassX, grassY, new Integer(1));
+		    if (this.isGrassSpaceCellOccupied(grassX, grassY)) {
+		    	int currentGrass = (int) grassSpace.getValueAt(grassX, grassY);
+		    	grassEnergy += currentGrass;
+		    }
+		    grassSpace.putObjectAt(grassX, grassY, new Integer(grassEnergy));
 		}
 	}
 	
@@ -75,7 +69,7 @@ public class RabbitsGrassSimulationSpace {
 			int grass = (Integer) this.grassSpace.getObjectAt(x, y);
 			this.grassSpace.putObjectAt(x, y, new Integer(0));
 			//return grass;
-			return 1;
+			return grass;
 		}
 		return 0;
 	}

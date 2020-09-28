@@ -143,5 +143,23 @@ public class RabbitsGrassSimulationSpace {
 			}
 		}
 		return totalEnergy;
-	}	
+	}
+	
+	/*
+	 * Return the number of grass patches in the space
+	 */
+	public int getGrassPatchesCount() {
+		int count = 0;
+		for (int x = 0; x < this.grassSpace.getSizeX(); x++) {
+			for (int y = 0; y < this.grassSpace.getSizeY(); y++) {
+				if (this.grassSpace.getObjectAt(x, y) != null) {
+					int grassValue = ((Integer)this.grassSpace.getObjectAt(x, y)).intValue();
+					if (grassValue > 0) {
+						count ++;
+					}
+				}
+			}
+		}
+		return count;
+	}
 }

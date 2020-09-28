@@ -54,8 +54,10 @@ public class RabbitsGrassSimulationModel extends SimModelImpl {
 		private DisplaySurface displaySurface;
 		private ArrayList<RabbitsGrassSimulationAgent> rabbits;
 		
-		private OpenSequenceGraph totalGrassEnergyAvailable;
+		private OpenSequenceGraph totalGrassAndRabbitEnergies;
+		private OpenSequenceGraph grassPatchesAndRabbitsCounts;
 		
+		// Collect data about total grass energy available
 		class grassEnergyAvailable implements DataSource, Sequence {
 			
 			public Object execute() {
@@ -67,6 +69,7 @@ public class RabbitsGrassSimulationModel extends SimModelImpl {
 			}
 		}
 		
+		// Collect data about total rabbit energy present
 		class rabbitEnergyPresent implements DataSource, Sequence {
 			
 			public Object execute() {
@@ -74,16 +77,32 @@ public class RabbitsGrassSimulationModel extends SimModelImpl {
 			}
 			
 			public double getSValue() {
-				return (double)this.getRabbitEnergy();
+				return (double)getRabbitEnergy();
+			}
+
+		}
+		
+		// Collect data about number of grass patches available
+		class grassPatchesAvailable implements DataSource, Sequence {
+			
+			public Object execute() {
+				return new Double(getSValue());
 			}
 			
-			private double getRabbitEnergy() {
-				double totalEnergy = 0.0;
-				for (int i = 0; i < rabbits.size(); i ++) {
-					totalEnergy += (double)rabbits.get(i).getEnergy();
-				}
-				
-				return totalEnergy;
+			public double getSValue() {
+				return (double)rabbitsGrassSpace.getGrassPatchesCount();
+			}
+		}
+		
+		// Collect data about number of rabbits present
+		class rabbitsPresent implements DataSource, Sequence {
+			
+			public Object execute() {
+				return new Double(getSValue());
+			}
+			
+			public double getSValue() {
+				return (double)rabbits.size();
 			}
 		}
 		
@@ -109,7 +128,8 @@ public class RabbitsGrassSimulationModel extends SimModelImpl {
 			this.buildDisplay();
 			
 			this.displaySurface.display();
-			this.totalGrassEnergyAvailable.display();
+			this.totalGrassAndRabbitEnergies.display();
+			this.grassPatchesAndRabbitsCounts.display();
 		}
 
 		public void setup() {
@@ -125,17 +145,24 @@ public class RabbitsGrassSimulationModel extends SimModelImpl {
 		    displaySurface = null;
 		    
 			// Nullify current OpenSequenceGraph
-			if (this.totalGrassEnergyAvailable != null) {
-				this.totalGrassEnergyAvailable.dispose();
+			if (this.totalGrassAndRabbitEnergies != null) {
+				this.totalGrassAndRabbitEnergies.dispose();
 			}
-			this.totalGrassEnergyAvailable = null;
-		    
+			this.totalGrassAndRabbitEnergies = null;
+			
+			if (this.grassPatchesAndRabbitsCounts != null) {
+				this.grassPatchesAndRabbitsCounts.dispose();
+			}
+			this.grassPatchesAndRabbitsCounts = null;
+			
 		    // Reinitialize display and sequence graph
 		    displaySurface = new DisplaySurface(this, "Rabbits Grass Simulation Window");
-		    this.totalGrassEnergyAvailable = new OpenSequenceGraph("Total Grass Energy Available", this);
+		    this.totalGrassAndRabbitEnergies = new OpenSequenceGraph("Total Grass And Rabbit Energies", this);
+		    this.grassPatchesAndRabbitsCounts = new OpenSequenceGraph("Grass Patches And Rabbits Counts", this);
 		    
 		    registerDisplaySurface("Rabbits Grass Simulation Window", displaySurface);
-		    this.registerMediaProducer("Plot", this.totalGrassEnergyAvailable);
+		    this.registerMediaProducer("Plot", this.totalGrassAndRabbitEnergies);
+		    this.registerMediaProducer("Plot", this.grassPatchesAndRabbitsCounts);
 		}
 		
 		/*
@@ -186,8 +213,11 @@ public class RabbitsGrassSimulationModel extends SimModelImpl {
 			displaySurface.addDisplayableProbeable(displayGrass, "Grass");
 			displaySurface.addDisplayableProbeable(displayAgents, "Agents");
 		
-			this.totalGrassEnergyAvailable.addSequence("Grass Energy", new grassEnergyAvailable());
-			this.totalGrassEnergyAvailable.addSequence("Rabbit Energy", new rabbitEnergyPresent());
+			this.totalGrassAndRabbitEnergies.addSequence("Grass Energy", new grassEnergyAvailable());
+			this.totalGrassAndRabbitEnergies.addSequence("Rabbit Energy", new rabbitEnergyPresent());
+			
+			this.grassPatchesAndRabbitsCounts.addSequence("Grass Patches Count", new grassPatchesAvailable());
+			this.grassPatchesAndRabbitsCounts.addSequence("Rabbits Count", new rabbitsPresent());
 		}
 		
 		/*
@@ -227,12 +257,19 @@ public class RabbitsGrassSimulationModel extends SimModelImpl {
 			
 			schedule.scheduleActionBeginning(0, new RabbitsGrassStep());
 			
-			class RabbitsGrassUpdateTotalGrassEnergy extends BasicAction {
+			class RabbitsGrassUpdateGrassAndRabbitEnergies extends BasicAction {
 				public void execute(){
-					totalGrassEnergyAvailable.step();
+					totalGrassAndRabbitEnergies.step();
 			    }
 			}
-			schedule.scheduleActionAtInterval(10, new RabbitsGrassUpdateTotalGrassEnergy());
+			schedule.scheduleActionAtInterval(10, new RabbitsGrassUpdateGrassAndRabbitEnergies());
+			
+			class RabbitsGrassUpdateGrassAndRabbitsCounts extends BasicAction {
+				public void execute(){
+					grassPatchesAndRabbitsCounts.step();
+			    }
+			}
+			schedule.scheduleActionAtInterval(10, new RabbitsGrassUpdateGrassAndRabbitsCounts());
 		}
 		
 		/*
@@ -333,5 +370,14 @@ public class RabbitsGrassSimulationModel extends SimModelImpl {
 		
 		public void setMaxInitialGrassEnergy(int maxEnergy) {
 			this.maxInitialGrassEnergy = maxEnergy;
+		}
+		
+		private int getRabbitEnergy() {
+			int totalEnergy = 0;
+			for (int i = 0; i < rabbits.size(); i ++) {
+				totalEnergy += rabbits.get(i).getEnergy();
+			}
+			
+			return totalEnergy;
 		}
 }

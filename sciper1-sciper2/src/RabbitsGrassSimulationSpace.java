@@ -29,21 +29,23 @@ public class RabbitsGrassSimulationSpace {
 	 * Generate grassCount number of new grass patches, each of at most maxGrassEnergy energy
 	 */
 	public void generateGrass(int grassCount, int maxGrassEnergy) {
-		for (int i = 0; i < grassCount; i++) {
-			// Choose random coordinates to place the grass
-			Random.createUniform();
-			int grassX = (int)(Math.random()*(grassSpace.getSizeX()));
-		    int grassY = (int)(Math.random()*(grassSpace.getSizeY()));
-		    // Choose random amount of energy in the range [1 ; MaxGrassEnergy]
-		    int newGrassEnergy = (int)(Math.random()*maxGrassEnergy) + 1;
+		if (grassCount > 0 && maxGrassEnergy > 0) {
+			for (int i = 0; i < grassCount; i++) {
+				// Choose random coordinates to place the grass
+				Random.createUniform();
+				int grassX = (int)(Math.random()*(grassSpace.getSizeX()));
+				int grassY = (int)(Math.random()*(grassSpace.getSizeY()));
+				// Choose random amount of energy in the range [1 ; MaxGrassEnergy]
+				int newGrassEnergy = (int)(Math.random()*maxGrassEnergy) + 1;
 		      
-		    // If there is already grass present at (grassX, grassY), accumulate the energy of old and new grass
-		    if (this.isGrassSpaceCellOccupied(grassX, grassY)) {
-		    	int currentGrass = (int) grassSpace.getValueAt(grassX, grassY);
-		    	newGrassEnergy = (newGrassEnergy + currentGrass) % maxGrassEnergy;
-		    }
-		    grassSpace.putObjectAt(grassX, grassY, new Integer(newGrassEnergy));
-		}
+				// If there is already grass present at (grassX, grassY), accumulate the energy of old and new grass
+				if (this.isGrassSpaceCellOccupied(grassX, grassY)) {
+					int currentGrass = (int) grassSpace.getValueAt(grassX, grassY);
+					newGrassEnergy = (newGrassEnergy + currentGrass) % maxGrassEnergy;
+				}
+				grassSpace.putObjectAt(grassX, grassY, new Integer(newGrassEnergy));
+			}
+		}	
 	}
 	
 	// Checks if an agent is present at given coordinates
@@ -61,10 +63,11 @@ public class RabbitsGrassSimulationSpace {
 	 */
 	public boolean addAgent(RabbitsGrassSimulationAgent agent) {
 		boolean added = false;
-		int trialLimit = 2 * this.rabbitsSpace.getSizeX() * this.rabbitsSpace.getSizeY();
+		Random.createUniform();
+		// Since we create a Uniform distribution, trialLimit is set to the number of possible cells
+		int trialLimit = this.rabbitsSpace.getSizeX() * this.rabbitsSpace.getSizeY();
 		int trialCount = 0;
 
-		Random.createUniform();
 		// Generate random coordinates until agent is successfully placed (e.g. empty cell is chosen)
 		//		or trial limit is reached
 		while (!added && trialCount < trialLimit) {

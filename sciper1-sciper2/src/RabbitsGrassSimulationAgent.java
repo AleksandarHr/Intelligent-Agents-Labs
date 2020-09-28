@@ -21,6 +21,9 @@ public class RabbitsGrassSimulationAgent implements Drawable {
 	private int moveY;
 	private int energy;
 	
+	private static int IDNumber = 0;
+	private int ID;
+	
 	private RabbitsGrassSimulationSpace rabbitsGrassSpace;
 	
 	public RabbitsGrassSimulationAgent(int initialEnergy) {
@@ -28,6 +31,9 @@ public class RabbitsGrassSimulationAgent implements Drawable {
 		this.y = -1;
 		setMoveXMoveY();
 		this.energy = initialEnergy;
+		
+		this.IDNumber++;
+		this.ID = IDNumber;
 	}
 	
 	private void setMoveXMoveY() {	
@@ -92,5 +98,17 @@ public class RabbitsGrassSimulationAgent implements Drawable {
 
 	public void setRabbitsGrassSpace(RabbitsGrassSimulationSpace space) {
 		this.rabbitsGrassSpace = space;
+	}
+	
+	public String getID() {
+		return "Rabbit-" + ID;
+	}
+	
+	public void report() {
+		System.out.println(this.getID() + 
+							" at " +
+							x + ", " + y + 
+							" has " + 
+							this.getEnergy() + " energy left.");
 	}
 }

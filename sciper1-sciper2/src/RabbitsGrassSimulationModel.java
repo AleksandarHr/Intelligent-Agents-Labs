@@ -93,6 +93,11 @@ public class RabbitsGrassSimulationModel extends SimModelImpl {
 			for (int i = 0; i < this.numInitRabbits; i++) {
 				addNewRabbit();
 			}
+			
+			for (int i = 0; i < this.rabbits.size(); i++) {
+				RabbitsGrassSimulationAgent rabbit = (RabbitsGrassSimulationAgent)this.rabbits.get(i);
+				rabbit.report();
+			}
 		}
 		
 		private void addNewRabbit() {
@@ -115,23 +120,28 @@ public class RabbitsGrassSimulationModel extends SimModelImpl {
 			Object2DDisplay displayAgents = new Object2DDisplay(rabbitsGrassSpace.getCurrentRabbitsSpace());
 			displayAgents.setObjectList(rabbits);
 
-			displaySurface.addDisplayable(displayGrass, "Grass");
-			displaySurface.addDisplayable(displayAgents, "Agents");
+			displaySurface.addDisplayableProbeable(displayGrass, "Grass");
+			displaySurface.addDisplayableProbeable(displayAgents, "Agents");
 		}
 		
 		public void buildSchedule() {
 			class RabbitsGrassStep extends BasicAction {
 				public void execute() {
 					SimUtilities.shuffle(rabbits);
-					int rabbits_size = rabbits.size();
-					for (int i = 0; i < rabbits_size ; i++) {
+					int rabbitsCount = rabbits.size();
+					int newBornRabbits = 0;
+					
+					for (int i = 0; i < rabbitsCount ; i++) {
 						RabbitsGrassSimulationAgent rabbit = (RabbitsGrassSimulationAgent)rabbits.get(i);
 						rabbit.step();
+						
 						//A rabbit is born at random location if the energy is sufficient
-						if(rabbit.getEnergy() > birthThreshold){
+						if( rabbit.getEnergy() > birthThreshold){
 							addNewRabbit();
+							newBornRabbits++;
 						}
 					}
+					
 					//Grow grass
 					rabbitsGrassSpace.generateGrass(grassGrowthRate, maxGrassEnergy);
 					int deadRabbits = removeDeadRabbits();
@@ -145,7 +155,7 @@ public class RabbitsGrassSimulationModel extends SimModelImpl {
 		
 		private int removeDeadRabbits() {
 			int count = 0;
-			for (int i = 0; i < rabbits.size(); i++) {
+			for (int i = rabbits.size() - 1; i >= 0; i--) {
 				RabbitsGrassSimulationAgent rabbit = (RabbitsGrassSimulationAgent)rabbits.get(i);
 				if (rabbit.getEnergy() < 1) {
 					rabbitsGrassSpace.removeAgentAt(rabbit.getX(), rabbit.getY());

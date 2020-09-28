@@ -28,10 +28,10 @@ public class RabbitsGrassSimulationAgent implements Drawable {
 	private RabbitsGrassSimulationSpace rabbitsGrassSpace;
 	
 	// Constructor for the agent object
-	public RabbitsGrassSimulationAgent(int initialEnergy) {
+	public RabbitsGrassSimulationAgent(int maxInitialEnergy) {
 		this.x = -1;
 		this.y = -1;
-		this.energy = initialEnergy;
+		this.energy =  (int)(Math.random()*maxInitialEnergy) + 1;
 		
 		this.IDNumber++;
 		this.ID = IDNumber;

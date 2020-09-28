@@ -1,12 +1,15 @@
 import uchicago.src.sim.engine.Schedule;
 import uchicago.src.sim.engine.SimModelImpl;
 import uchicago.src.sim.engine.SimInit;
+import uchicago.src.sim.engine.BasicAction;
 import uchicago.src.sim.gui.DisplaySurface;
 import uchicago.src.sim.gui.ColorMap;
 import uchicago.src.sim.gui.Value2DDisplay;
 import uchicago.src.sim.gui.Object2DDisplay;
-import uchicago.src.sim.engine.BasicAction;
 import uchicago.src.sim.util.SimUtilities;
+import uchicago.src.sim.analysis.DataSource;
+import uchicago.src.sim.analysis.OpenSequenceGraph;
+import uchicago.src.sim.analysis.Sequence;
 
 import java.awt.Color;
 import java.util.ArrayList;
@@ -29,7 +32,7 @@ public class RabbitsGrassSimulationModel extends SimModelImpl {
 		private static final int DEFAULTINITGRASS = 10;
 		private static final int DEFAULTGRASSGROWTHRATE = 5;
 		private static final int DEFAULTBIRTHTHRESHOLD = 10;
-		private static final int DEFAULTINITENERGY = 10;
+		private static final int DEFAULTMAXINITRABBITENERGY = 10;
 		private static final int DEFAULTMAXGRASSENERGY = 15;
 		private static final int DEFAULTMAXINITIALGRASSENERGY = 5;
 		
@@ -39,7 +42,7 @@ public class RabbitsGrassSimulationModel extends SimModelImpl {
 		private int numInitGrass = DEFAULTINITGRASS;
 		private int grassGrowthRate = DEFAULTGRASSGROWTHRATE;
 		private int birthThreshold = DEFAULTBIRTHTHRESHOLD;
-		private int initialEnergy = DEFAULTINITENERGY;
+		private int maxInitialRabbitEnergy = DEFAULTMAXINITRABBITENERGY;
 		private int maxGrassEnergy = DEFAULTMAXGRASSENERGY;
 		private int maxInitialGrassEnergy = DEFAULTMAXINITIALGRASSENERGY;
 		
@@ -50,6 +53,20 @@ public class RabbitsGrassSimulationModel extends SimModelImpl {
 		private RabbitsGrassSimulationSpace rabbitsGrassSpace;
 		private DisplaySurface displaySurface;
 		private ArrayList<RabbitsGrassSimulationAgent> rabbits;
+		
+		private OpenSequenceGraph totalGrassEnergyAvailable;
+		
+		class grassEnergyAvailable implements DataSource, Sequence {
+			
+			public Object execute() {
+				return new Double(getSValue());
+			}
+			
+			public double getSValue() {
+				return (double)rabbitsGrassSpace.getTotalGrassEnergy();
+			}
+		}
+		
 		
 		// Main function to kick off the simulation
 		public static void main(String[] args) {
@@ -72,7 +89,8 @@ public class RabbitsGrassSimulationModel extends SimModelImpl {
 			this.buildSchedule();
 			this.buildDisplay();
 			
-			displaySurface.display();
+			this.displaySurface.display();
+			this.totalGrassEnergyAvailable.display();
 		}
 
 		public void setup() {
@@ -87,9 +105,18 @@ public class RabbitsGrassSimulationModel extends SimModelImpl {
 		    }
 		    displaySurface = null;
 		    
-		    // Reinitialize display
+			// Nullify current OpenSequenceGraph
+			if (this.totalGrassEnergyAvailable != null) {
+				this.totalGrassEnergyAvailable.dispose();
+			}
+			this.totalGrassEnergyAvailable = null;
+		    
+		    // Reinitialize display and sequence graph
 		    displaySurface = new DisplaySurface(this, "Rabbits Grass Simulation Window");
+		    this.totalGrassEnergyAvailable = new OpenSequenceGraph("Total Grass Energy Available", this);
+		    
 		    registerDisplaySurface("Rabbits Grass Simulation Window", displaySurface);
+		    this.registerMediaProducer("Plot", this.totalGrassEnergyAvailable);
 		}
 		
 		/*
@@ -115,7 +142,7 @@ public class RabbitsGrassSimulationModel extends SimModelImpl {
 		
 		// Creates a new rabbit agents with initial energy and adds it to the list of agents and simulation space
 		private void addNewRabbit() {
-		    RabbitsGrassSimulationAgent rabbit = new RabbitsGrassSimulationAgent(this.initialEnergy);
+		    RabbitsGrassSimulationAgent rabbit = new RabbitsGrassSimulationAgent(this.maxInitialRabbitEnergy);
 		    this.rabbits.add(rabbit);
 		    rabbitsGrassSpace.addAgent(rabbit);
 		}
@@ -139,6 +166,8 @@ public class RabbitsGrassSimulationModel extends SimModelImpl {
 
 			displaySurface.addDisplayableProbeable(displayGrass, "Grass");
 			displaySurface.addDisplayableProbeable(displayAgents, "Agents");
+		
+			this.totalGrassEnergyAvailable.addSequence("Grass Energy", new grassEnergyAvailable());
 		}
 		
 		/*
@@ -158,9 +187,11 @@ public class RabbitsGrassSimulationModel extends SimModelImpl {
 						rabbit.step();
 						
 						// If the energy is sufficient, a rabbit is born at a random location
-						if( rabbit.getEnergy() > birthThreshold){
+						if (rabbit.getEnergy() > birthThreshold){
 							addNewRabbit();
 							newBornRabbits++;
+							// reduce current rabbit's energy in half
+							rabbit.setEnergy((int)Math.floor(rabbit.getEnergy() / 2));
 						}
 					}
 					
@@ -175,6 +206,13 @@ public class RabbitsGrassSimulationModel extends SimModelImpl {
 			}
 			
 			schedule.scheduleActionBeginning(0, new RabbitsGrassStep());
+			
+			class RabbitsGrassUpdateTotalGrassEnergy extends BasicAction {
+				public void execute(){
+					totalGrassEnergyAvailable.step();
+			    }
+			}
+			schedule.scheduleActionAtInterval(10, new RabbitsGrassUpdateTotalGrassEnergy());
 		}
 		
 		/*
@@ -198,7 +236,7 @@ public class RabbitsGrassSimulationModel extends SimModelImpl {
 		public String[] getInitParam() {
 			// Parameters to be set by users via the Repast UI slider bar
 			// Do "not" modify the parameters names provided in the skeleton code, you can add more if you want 
-			String[] params = { "GridSize", "NumInitRabbits", "NumInitGrass", "GrassGrowthRate", "BirthThreshold", "InitialEnergy", "MaxGrassEnergy", "MaxInitialGrassEnergy"};
+			String[] params = { "GridSize", "NumInitRabbits", "NumInitGrass", "GrassGrowthRate", "BirthThreshold", "MaxInitialRabbitEnergy", "MaxGrassEnergy", "MaxInitialGrassEnergy"};
 			return params;
 		}
 		
@@ -253,12 +291,12 @@ public class RabbitsGrassSimulationModel extends SimModelImpl {
 			this.birthThreshold = birthThreshold;
 		}
 		
-		public int getInitialEnergy() {
-			return this.initialEnergy;
+		public int getMaxInitialRabbitEnergy() {
+			return this.maxInitialRabbitEnergy;
 		}
 		
-		public void setInitialEnergy(int energy) {
-			this.initialEnergy = energy;
+		public void setMaxInitialRabbitEnergy(int energy) {
+			this.maxInitialRabbitEnergy = energy;
 		}
 		
 		public int getMaxGrassEnergy() {

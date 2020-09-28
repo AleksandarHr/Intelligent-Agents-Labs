@@ -130,4 +130,19 @@ public class RabbitsGrassSimulationSpace {
 		return this.rabbitsSpace;
 	}
 	
+	/*
+	 * Returns the total sum of grass energy available
+	 */
+	public int getTotalGrassEnergy() {
+		int totalEnergy = 0;
+		for (int x = 0; x < this.grassSpace.getSizeX(); x++) {
+			for (int y = 0; y < this.grassSpace.getSizeY(); y++) {
+				if (this.grassSpace.getObjectAt(x, y) != null) {
+					totalEnergy += ((Integer)this.grassSpace.getObjectAt(x, y)).intValue();
+				}
+			}
+		}
+		return totalEnergy;
+	}
+	
 }

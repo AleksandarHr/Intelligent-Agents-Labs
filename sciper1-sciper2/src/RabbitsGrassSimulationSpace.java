@@ -20,7 +20,7 @@ public class RabbitsGrassSimulationSpace {
 		// Initialize the grass grid celss
 		for (int x = 0; x < size; x++) {
 			for (int y = 0; y < size; y++) {
-				grassSpace.putObjectAt(x, y, new Integer(0));
+				grassSpace.putObjectAt(x, y, Integer.valueOf(0));
 			}
 		}
 	}
@@ -43,7 +43,7 @@ public class RabbitsGrassSimulationSpace {
 					int currentGrass = (int) grassSpace.getValueAt(grassX, grassY);
 					newGrassEnergy = (newGrassEnergy + currentGrass) % maxGrassEnergy;
 				}
-				grassSpace.putObjectAt(grassX, grassY, new Integer(newGrassEnergy));
+				grassSpace.putObjectAt(grassX, grassY, Integer.valueOf(newGrassEnergy));
 			}
 		}	
 	}
@@ -96,7 +96,7 @@ public class RabbitsGrassSimulationSpace {
 	public int eatGrassAt(int x, int y) {
 		if (this.grassSpace.getObjectAt(x, y) != null) {
 			int grass = (Integer) this.grassSpace.getObjectAt(x, y);
-			this.grassSpace.putObjectAt(x, y, new Integer(0));
+			this.grassSpace.putObjectAt(x, y, Integer.valueOf(0));
 			return grass;
 		}
 		return 0;

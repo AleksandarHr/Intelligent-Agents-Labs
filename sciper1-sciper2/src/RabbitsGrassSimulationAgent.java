@@ -2,9 +2,7 @@ import uchicago.src.sim.gui.Drawable;
 import uchicago.src.sim.gui.SimGraphics;
 import java.awt.Color;
 
-import uchicago.src.sim.gui.Drawable;
 import uchicago.src.sim.util.Random;
-import uchicago.src.sim.gui.SimGraphics;
 import uchicago.src.sim.space.Object2DGrid;
 
 /**
@@ -33,7 +31,7 @@ public class RabbitsGrassSimulationAgent implements Drawable {
 		this.y = -1;
 		this.energy =  (int)(Math.random()*maxInitialEnergy) + 1;
 		
-		this.IDNumber++;
+		IDNumber++;
 		this.ID = IDNumber;
 	}
 	

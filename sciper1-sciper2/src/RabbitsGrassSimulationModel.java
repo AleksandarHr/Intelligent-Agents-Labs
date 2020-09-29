@@ -61,7 +61,7 @@ public class RabbitsGrassSimulationModel extends SimModelImpl {
 		class grassEnergyAvailable implements DataSource, Sequence {
 			
 			public Object execute() {
-				return new Double(getSValue());
+				return Double.valueOf(getSValue());
 			}
 			
 			public double getSValue() {
@@ -73,7 +73,7 @@ public class RabbitsGrassSimulationModel extends SimModelImpl {
 		class rabbitEnergyPresent implements DataSource, Sequence {
 			
 			public Object execute() {
-				return new Double(getSValue());
+				return Double.valueOf(getSValue());
 			}
 			
 			public double getSValue() {
@@ -86,7 +86,7 @@ public class RabbitsGrassSimulationModel extends SimModelImpl {
 		class grassPatchesAvailable implements DataSource, Sequence {
 			
 			public Object execute() {
-				return new Double(getSValue());
+				return Double.valueOf(getSValue());
 			}
 			
 			public double getSValue() {
@@ -98,7 +98,7 @@ public class RabbitsGrassSimulationModel extends SimModelImpl {
 		class rabbitsPresent implements DataSource, Sequence {
 			
 			public Object execute() {
-				return new Double(getSValue());
+				return Double.valueOf(getSValue());
 			}
 			
 			public double getSValue() {

@@ -43,10 +43,21 @@ public class RabbitsGrassSimulationAgent implements Drawable {
 	private void setMoveXMoveY() {	
 		this.moveX = 0;
 		this.moveY = 0;
-		while ((moveX == 0 && moveY == 0) || (moveX != 0 && moveY != 0)) {
-			Random.createUniform();
-			moveX = (int)Math.floor(Math.random() * 3) - 1;
-			moveY = (int)Math.floor(Math.random() * 3) - 1;
+		
+		Random.createUniform();
+		int direction = (int)Math.floor(Math.random()*4);
+		if (direction == 0) {
+			// move left
+			this.moveX = -1;
+		} else if (direction == 1) {
+			// move up
+			this.moveY = -1;
+		} else if (direction == 2) {
+			// move right
+			this.moveX = 1;
+		} else if (direction == 3) {
+			// move down
+			this.moveY = 1;
 		}
 	}
 	
@@ -70,8 +81,14 @@ public class RabbitsGrassSimulationAgent implements Drawable {
 		newX = (newX + grid.getSizeX()) % grid.getSizeX();
 		newY = (newY + grid.getSizeY()) % grid.getSizeY();
 		
+		// Try to move the rabbit to the new location
 		if (tryMoveRabbit(newX, newY)) {
-			this.energy += this.rabbitsGrassSpace.eatGrassAt(x, y);	
+			// If the move was successful, eat any grass that might be there
+			this.energy += this.rabbitsGrassSpace.eatGrassAt(newX, newY);	
+		} else {
+			// If the move was not successful, eat any grass that might have been generated
+			//		at the current location of the rabbit
+			this.energy += this.rabbitsGrassSpace.eatGrassAt(x, y);
 		}
 		
 		this.energy--;

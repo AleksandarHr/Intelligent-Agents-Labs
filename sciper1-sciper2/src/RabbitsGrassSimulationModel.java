@@ -201,7 +201,7 @@ public class RabbitsGrassSimulationModel extends SimModelImpl {
 			map.mapColor(0, Color.black);
 			
 			for(int i = 1; i <= this.maxGrassEnergy; i++) {
-				map.mapColor(i, 0, i * (1.0 / this.maxGrassEnergy), 0);
+				map.mapColor(i, 0, ((double)i)/ this.maxGrassEnergy, 0);
 			}
 			
 			Value2DDisplay displayGrass = new Value2DDisplay(rabbitsGrassSpace.getCurrentGrassSpace(), map);
@@ -240,8 +240,10 @@ public class RabbitsGrassSimulationModel extends SimModelImpl {
 						if (rabbit.getEnergy() > birthThreshold){
 							addNewRabbit();
 							newBornRabbits++;
-							// reduce current rabbit's energy in half
-							rabbit.setEnergy((int)Math.floor(rabbit.getEnergy() / 2));
+							// Make sure rabbit's energy after reproduction is below the birth threshold
+							// 		by reduce current rabbit's energy in half (or in edge cases set it to
+							//		(birthThreshold - 1), if needed - e.g. if grass patch contained too much energy)
+							rabbit.setEnergy(Math.min(birthThreshold - 1, (int)Math.floor(rabbit.getEnergy() / 2)));
 						}
 					}
 					

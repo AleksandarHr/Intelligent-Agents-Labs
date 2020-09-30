@@ -113,6 +113,7 @@ public class RabbitsGrassSimulationModel extends SimModelImpl {
 
 			SimInit init = new SimInit();
 			RabbitsGrassSimulationModel model = new RabbitsGrassSimulationModel();
+
 			// Do "not" modify the following lines of parsing arguments
 			if (args.length == 0) // by default, you don't use parameter file nor batch mode 
 				init.loadModel(model, "", false);

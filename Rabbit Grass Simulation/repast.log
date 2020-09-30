@@ -1,0 +1,12 @@
+Error reading parameter file
+java.io.FileNotFoundException:   (The system cannot find the path specified)
+	at java.base/java.io.FileInputStream.open0(Native Method)
+	at java.base/java.io.FileInputStream.open(FileInputStream.java:219)
+	at java.base/java.io.FileInputStream.<init>(FileInputStream.java:157)
+	at java.base/java.io.FileInputStream.<init>(FileInputStream.java:112)
+	at java.base/java.io.FileReader.<init>(FileReader.java:60)
+	at uchicago.src.sim.parameter.ParameterSetterFactory.createParameterSetter(Unknown Source)
+	at uchicago.src.sim.engine.SimInit.load(Unknown Source)
+	at uchicago.src.sim.engine.SimInit.load(Unknown Source)
+	at uchicago.src.sim.engine.SimInit.loadModel(Unknown Source)
+	at RabbitsGrassSimulationModel.main(RabbitsGrassSimulationModel.java:120)

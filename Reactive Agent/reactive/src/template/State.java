@@ -10,10 +10,6 @@ public class State {
     private City destinationCity;
     private boolean task;
     
-    
-	private static ArrayList<State> states = new ArrayList<State>();
-	
-
     public State(City currentCity) {
         this.currentCity = currentCity;
         this.destinationCity = null;
@@ -25,18 +21,6 @@ public class State {
         this.destinationCity = destinationCity;
         this.task = true;
     }
-	
-	public static void initStates(List<City> cities) {
-		for (City city1 : cities) {
-			for (City city2: cities) {
-				if(city1 == city2) {
-					State.states.add(new State(city1));
-				} else {
-					State.states.add(new State(city1, city2));
-				}
-			}
-		}
-	}
 	
 	public void setCurrentCity(City currentCity) {
 		this.currentCity = currentCity;
@@ -52,10 +36,6 @@ public class State {
 
 	public City getDestinationCity() {
 		return destinationCity;
-	}
-	
-	public static ArrayList<State> getStates(){
-		return states;
 	}
 	
 	public boolean getTask() {

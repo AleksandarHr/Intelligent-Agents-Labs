@@ -25,6 +25,7 @@ public class Reactive implements ReactiveBehavior {
 
 	private Random random;
 	private double pPickup;
+	//private int costPerKm;
 	private int numActions;
 	private Agent myAgent;
 	
@@ -46,9 +47,13 @@ public class Reactive implements ReactiveBehavior {
 		// Reads the discount factor from the agents.xml file.
 		// If the property is not present it defaults to 0.95
 		Double discount = agent.readProperty("discount-factor", Double.class, 0.95);
-
+		
+		// ??? Can we do that instead of having to pass vehicle in the initRTable() function???
+		//Integer costPerKm = agent.readProperty("cost-per-km", Integer.class, 5);
+		
 		this.random = new Random();
 		this.pPickup = discount;
+		//this.costPerKm = costPerKm;
 		this.numActions = 0;
 		this.myAgent = agent;
 		
@@ -171,24 +176,25 @@ public class Reactive implements ReactiveBehavior {
 		//Initialize R table
 		for (State state : this.possibleStates) {
 			HashMap<RoadAction, Double> stateRewards = new HashMap<RoadAction, Double>();
-			if (state.getDestinationCity() == null) {
-				// We do not have a task right now
-				rTable.put(state, new HashMap<RoadAction, Double>());
-				for (RoadAction action : this.possibleActions) {
-					City currentCity = state.getCurrentCity();
-					if (action.getActionType() == RoadActionType.MOVE) {
-						if (currentCity.neighbors().contains(action.getNextCity())) {
-							double reward = (-1.0)* currentCity.distanceTo(action.getNextCity()) * v.costPerKm();
-							 stateRewards.put(action, reward);
-						} else {
-						// not a neighboring city, no reward data
-						}
-					} else if (action.getActionType() == RoadActionType.PICKUP) {
-						double reward = td.reward(state.getCurrentCity(), state.getDestinationCity()) - state.getCurrentCity().distanceTo(state.getDestinationCity());
+			
+			for (RoadAction action : this.possibleActions) {
+				City currentCity = state.getCurrentCity();
+				City actionNextCity = action.getNextCity();
+				if (action.getActionType() == RoadActionType.MOVE) {
+					if (actionNextCity != null && currentCity.hasNeighbor(actionNextCity)) {
+						// Reward is negative - only cost for moving to next city
+						double reward = (-1.0)* currentCity.distanceTo(actionNextCity) * v.costPerKm();
 						stateRewards.put(action, reward);
 					}
-				}
+				} else if (action.getActionType() == RoadActionType.PICKUP) {
+					if (state.getDestinationCity() == null) {
+						// Only allowed to pickup if we don't have a destination city already (e.g. if we haven't already picked up a task)
+						double reward = (double) td.reward(currentCity, state.getDestinationCity()) - currentCity.distanceTo(state.getDestinationCity());
+						stateRewards.put(action, reward);
+					}
+				}		
 			}
+			this.rTable.put(state, stateRewards);
 		}
 	}
 	

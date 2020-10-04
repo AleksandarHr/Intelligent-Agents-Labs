@@ -12,6 +12,7 @@ import logist.task.Task;
 import logist.task.TaskDistribution;
 import logist.topology.Topology;
 import logist.topology.Topology.City;
+import template.RoadAction.RoadActionType;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -53,24 +54,25 @@ public class Reactive implements ReactiveBehavior {
 		initQ_table();
 		initV_table();
 		initBestActions_table();
-		initR_table();
+		initR_table(agent, td, agent.vehicles().iterator().next());
 
-		reinforcement_learning_algorithm();
+		reinforcement_learning_algorithm(td);
 	}
 
 	@Override
 	public Action act(Vehicle vehicle, Task availableTask) {
 		//TO DO
 		Action action;
+		action = new Pickup(availableTask);
 
-		if (availableTask == null || random.nextDouble() > pPickup) {
-			City currentCity = vehicle.getCurrentCity();
-			action = new Move(currentCity.randomNeighbor(random));
-			System.out.println("Leave the task and MOVE to neighbor city");
-		} else {
-			action = new Pickup(availableTask);
-			System.out.println("PICKUP the task");
-		}
+//		if (availableTask == null || random.nextDouble() > pPickup) {
+//			City currentCity = vehicle.getCurrentCity();
+//			action = new Move(currentCity.randomNeighbor(random));
+//			System.out.println("Leave the task and MOVE to neighbor city");
+//		} else {
+//			action = new Pickup(availableTask);
+//			System.out.println("PICKUP the task");
+//		}
 		
 		if (numActions >= 1) {
 			System.out.println("The total profit after "+numActions+" actions is "+myAgent.getTotalProfit()+" (average profit: "+(myAgent.getTotalProfit() / (double)numActions)+")");
@@ -80,13 +82,13 @@ public class Reactive implements ReactiveBehavior {
 		return action;
 	}
 	
-	public void reinforcement_learning_algorithm() {
+	public void reinforcement_learning_algorithm(TaskDistribution td) {
 		while (true) {
 			HashMap<State, Double> previous_V_table = new HashMap<State, Double> (V_table);
 
 			for (State state : Q_table.keySet()) {
 				for (RoadAction action : Q_table.get(state).keySet()) {			
-					double value = R_table.get(state).get(action) + discountedSum(state, action);
+					double value = R_table.get(state).get(action) + discountedSum(td, state, action);
 					Q_table.get(state).put(action, value);
 				}
 				//Find best action (java 8 implementation)
@@ -101,16 +103,22 @@ public class Reactive implements ReactiveBehavior {
 		}
 	}
 	
-	public double transition_probability(State s1, RoadAction a, State s2) {
+	public double transition_probability(TaskDistribution td, State s1, RoadAction a, State s2) {
 		//TO DO
-		return 0.0;
+		double probability = 0.0;
+		if(s2.getDestinationCity() == s2.getCurrentCity()) {
+			probability = 0.0;
+		} else {
+			
+		}
+		return probability;
 	}
 	
-	public double discountedSum(State state, RoadAction action) {
+	public double discountedSum(TaskDistribution td, State state, RoadAction action) {
 		double sum = 0.0;
 		
 		for (State state_iter : State.getStates()) {
-			sum += transition_probability(state, action, state_iter) * V_table.get(state_iter);
+			sum += transition_probability(td, state, action, state_iter) * V_table.get(state_iter);
 		}
 		
 		sum = this.pPickup * sum;
@@ -154,8 +162,29 @@ public class Reactive implements ReactiveBehavior {
 		}
 	}
 	
-	public void initR_table() {
+	public void initR_table(Agent agent, TaskDistribution td, Vehicle v) {
 		//Initialize R table
+		for (State state : State.getStates()) {
+			HashMap<RoadAction, Double> stateRewards = new HashMap<RoadAction, Double>();
+			if (state.getDestinationCity() == null) {
+				// We do not have a task right now
+				R_table.put(state, new HashMap<RoadAction, Double>());
+				for (RoadAction action : RoadAction.getActions()) {
+					City currentCity = state.getCurrentCity();
+					if (action.getActionType() == RoadActionType.MOVE) {
+						if (currentCity.neighbors().contains(action.getNextCity())) {
+							double reward = (-1.0)* currentCity.distanceTo(action.getNextCity()) * v.costPerKm();
+							 stateRewards.put(action, reward);
+						} else {
+						// not a neighboring city, no reward data
+						}
+					} else if (action.getActionType() == RoadActionType.PICKUP) {
+						double reward = td.reward(state.getCurrentCity(), state.getDestinationCity()) - state.getCurrentCity().distanceTo(state.getDestinationCity());
+						stateRewards.put(action, reward);
+					}
+				}
+			}
+		}
 	}
 	
 	

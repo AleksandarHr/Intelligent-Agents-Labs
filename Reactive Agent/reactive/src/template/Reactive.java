@@ -31,6 +31,7 @@ public class Reactive implements ReactiveBehavior {
 	
 	private static Set<RoadAction> possibleActions = new HashSet<RoadAction>(); //set of all possible cities to go to
 	private static Set<State> possibleStates = new HashSet<State>();
+	private List<City> allCities = new ArrayList<City>();
 	
 	// Q-table
 	private Map<State, HashMap<RoadAction, Double>> qTable;
@@ -58,6 +59,7 @@ public class Reactive implements ReactiveBehavior {
 		//this.costPerKm = costPerKm;
 		this.numActions = 0;
 		this.myAgent = agent;
+		this.allCities = topology.cities();
 		
 		//This should be changed based on the action/state implementation
 		initPossibleActions(topology.cities());
@@ -75,7 +77,7 @@ public class Reactive implements ReactiveBehavior {
 	@Override
 	public Action act(Vehicle vehicle, Task availableTask) {
 		//TO DO 
-		
+				
 		Action action;
 		
 		State currentState = new State(vehicle.getCurrentCity());
@@ -131,21 +133,14 @@ public class Reactive implements ReactiveBehavior {
 				
 		if (action.getActionType() == RoadActionType.MOVE) {
 			// check if the action is legal
-			if (s1.getCurrentCity().neighbors().contains(action.getNextCity()) && action.getNextCity() == s2.getCurrentCity()) {
-				if (s2.getDestinationCity() == null) {
-					// We will not be able to pickup when we get to s2
-				} else {
-					// We will be able to pickup when we get to s2
-				}
+			City destination = s1.getDestinationCity();
+			if (destination == null && action.getNextCity() == s2.getCurrentCity() && s1.getCurrentCity().neighbors().contains(action.getNextCity())) {
+				probability = this.highestTaskPotentialNeighbour(s1.getCurrentCity().neighbors(), td);
 			}
 		} else if (action.getActionType() == RoadActionType.PICKUP) {
 			// check if pickup action is legal
-			if (s1.getDestinationCity() != null && s1.getDestinationCity() == s2.getCurrentCity()) {
-				if (s2.getDestinationCity() == null) {
-					// We will not be able to pickup when we get to s2 
-				} else {
-					// We will be able to pickup when we get to s2 (after we drop off this task at s2's currentCity)
-				}
+			if (s1.getDestinationCity() == null && action.getNextCity() == s2.getCurrentCity()) {
+				probability = td.probability(s1.getCurrentCity(), action.getNextCity());
 			}
 		}
 		
@@ -207,19 +202,19 @@ public class Reactive implements ReactiveBehavior {
 				double reward = 0.0;
 				City currentCity = state.getCurrentCity();
 				City actionNextCity = action.getNextCity();
-				if (action.getActionType() == RoadActionType.MOVE) {
+				if (action.getActionType() == RoadActionType.MOVE && state.getDestinationCity() == null) {
 					if (actionNextCity != null && currentCity.hasNeighbor(actionNextCity)) {
 						// Reward is negative - only cost for moving to next city
 						reward -= currentCity.distanceTo(actionNextCity) * v.costPerKm();
 						stateRewards.put(action, reward);
 					}
-				} else if (action.getActionType() == RoadActionType.PICKUP) {
-					if (state.getDestinationCity() != null) {
-						// Only allowed to pickup if we have a destination city?
+				} else if (action.getActionType() == RoadActionType.PICKUP && state.getDestinationCity() != null) {
+					if (action.getNextCity() == state.getDestinationCity()) {
+						// Only allowed to pickup if we do not already have a destination city
 						reward += td.reward(currentCity, state.getDestinationCity()) - currentCity.distanceTo(state.getDestinationCity());
 						stateRewards.put(action, reward);
-					}
-				}		
+					}		
+				}
 			}
 			this.rTable.put(state, stateRewards);
 		}
@@ -259,5 +254,17 @@ public class Reactive implements ReactiveBehavior {
 			}
 			this.totalTaskProbabilities.put(from, totalProbability);
 		}
+	}
+	
+	private double highestTaskPotentialNeighbour(List<City> neighbors, TaskDistribution td) {
+		double max = 0.0;
+		for (City n : neighbors) {
+			for (City c : this.allCities) {
+				if (n != c) {
+					max = Math.max(max, td.probability(n, c));
+				}
+			}
+		}	
+		return max;
 	}
 }

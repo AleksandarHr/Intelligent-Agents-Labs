@@ -2,6 +2,7 @@ package template;
 
 import logist.topology.Topology.City;
 import java.util.List;
+import java.util.Objects;
 import java.util.ArrayList;
 
 public class State {
@@ -41,6 +42,11 @@ public class State {
 	
 	public boolean getTask() {
 		return task;
+	}
+	
+	@Override
+	public int hashCode() {
+		return Objects.hash(currentCity, destinationCity);
 	}
 
 }

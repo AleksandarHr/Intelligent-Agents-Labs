@@ -77,17 +77,24 @@ public class Reactive implements ReactiveBehavior {
 	@Override
 	public Action act(Vehicle vehicle, Task availableTask) {				
 		Action action;
-				
+
 		State currentState = new State(vehicle.getCurrentCity());
 		RoadAction bestAction = bestActions.get(currentState);
+		if (bestAction == null) {
+		System.out.println("INIT = " + currentState.getCurrentCity() + " :: INIT Dest = " + currentState.getDestinationCity());
+		}
+		for (Map.Entry<State, RoadAction> entry: bestActions.entrySet()) {
+		//	System.out.println("Curr = " + entry.getKey().getCurrentCity() + " :: Dest = " + entry.getKey().getDestinationCity());
+		}
+		
 		int counter = 0;
 		for (Map.Entry<State, RoadAction> entry : bestActions.entrySet()) {
 			RoadAction a = entry.getValue();
 			if (a == null) {
+				System.out.println("Curr = " + entry.getKey().getCurrentCity() + " :: Dest = " + entry.getKey().getDestinationCity());
 				counter++;
 			}
 		}
-		System.out.println("Counter is = " + counter);
 		
 		System.out.println("Best action's next city = " + bestAction.getNextCity());
 		if(availableTask != null && bestAction.getActionType() == RoadActionType.PICKUP) {
@@ -118,6 +125,7 @@ public class Reactive implements ReactiveBehavior {
 					if (rTable.containsKey(state)) {
 						if (rTable.get(state).containsKey(action)) {
 							double value = rTable.get(state).get(action) + discountedSum(td, state, action);
+							//System.out.println("R table: " + rTable.get(state).get(action) + " Sum: " + discountedSum(td, state, action));
 							qTable.get(state).put(action, value);
 						}
 					}
@@ -133,7 +141,6 @@ public class Reactive implements ReactiveBehavior {
 						bestAction = entry.getKey();
 					}
 				}
-				
 				vTable.put(state, bestValue);
 				bestActions.put(state, bestAction);
 			}
@@ -169,7 +176,7 @@ public class Reactive implements ReactiveBehavior {
 			double tp = transitionProbability(td, state, action, state_iter);
 			sum += tp * vTable.get(state_iter);
 			if (vTable.get(state_iter) != 0.0 && tp != 0.0) {
-				System.out.println("TP = " + tp + " :: vTable = " + vTable.get(state_iter));
+				//System.out.println("TP = " + tp + " :: vTable = " + vTable.get(state_iter));
 			}
 		}
 		
@@ -181,12 +188,14 @@ public class Reactive implements ReactiveBehavior {
 	public boolean converged(HashMap<State, Double> previous_V_table, HashMap<State, Double> current_V_table) {
 		double max = 0.0;
 		for (State state : previous_V_table.keySet()) {
+			//System.out.println("Previous value: " + previous_V_table.get(state) + " Next value: " + current_V_table.get(state));
 			double difference = Math.abs(previous_V_table.get(state) - current_V_table.get(state));
 			if (difference > max) {
 				max = difference;
 			}
 		}
 		
+		//System.out.println(max);
 		return max < 0.001;
 	}
 	
@@ -233,7 +242,7 @@ public class Reactive implements ReactiveBehavior {
 					}
 				} else if (action.getActionType() == RoadActionType.PICKUP && state.getDestinationCity() != null) {
 					if (action.getNextCity() == state.getDestinationCity()) {
-						// Only allowed to pickup if we do not already have a destination city
+						// Only allowed to pickup if we do not already have a destination city						
 						reward += td.reward(currentCity, state.getDestinationCity()) - currentCity.distanceTo(state.getDestinationCity());
 						stateRewards.put(action, reward);
 					}		
@@ -250,9 +259,9 @@ public class Reactive implements ReactiveBehavior {
 				// Should we only add neighboring cities for the move action?
 				// TODO: No ^, we don't have a notion of current city here, so just add all cities
 				this.possibleActions.add(new RoadAction(nextCity, RoadActionType.MOVE));
+				this.possibleActions.add(new RoadAction(nextCity, RoadActionType.PICKUP));
 			}
 		}
-		this.possibleActions.add(new RoadAction(null, RoadActionType.PICKUP));
 	}
 	
 	private void initPossibleStates(List<City> cities) {

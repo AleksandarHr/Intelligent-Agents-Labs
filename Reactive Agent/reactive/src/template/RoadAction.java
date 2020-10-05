@@ -38,5 +38,4 @@ public class RoadAction {
 	public RoadActionType getActionType() {
 		return actionChosen;
 	}
-
 }

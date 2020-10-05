@@ -34,13 +34,13 @@ public class Reactive implements ReactiveBehavior {
 	private List<City> allCities = new ArrayList<City>();
 	
 	// Q-table
-	private Map<State, HashMap<RoadAction, Double>> qTable;
+	private Map<State, HashMap<RoadAction, Double>> qTable = new HashMap<State, HashMap<RoadAction, Double>>();
 	// Value table
-	private HashMap<State, Double> vTable;
+	private HashMap<State, Double> vTable = new HashMap<State, Double>();
 	// Best action
-    private HashMap<State, RoadAction> bestActions;
+    private HashMap<State, RoadAction> bestActions = new HashMap<State, RoadAction>();
 	// Reward table
-	private Map<State, HashMap<RoadAction, Double>> rTable;
+	private Map<State, HashMap<RoadAction, Double>> rTable = new HashMap<State, HashMap<RoadAction, Double>>();
 	// A mapping of probabilities that there is a task from a given city
 	private Map<City, Double> totalTaskProbabilities;
 	
@@ -52,7 +52,7 @@ public class Reactive implements ReactiveBehavior {
 		Double discount = agent.readProperty("discount-factor", Double.class, 0.95);
 		
 		// ??? Can we do that instead of having to pass vehicle in the initRTable() function???
-		//Integer costPerKm = agent.readProperty("cost-per-km", Integer.class, 5);
+		// Integer costPerKm = agent.readProperty("cost-per-km", Integer.class, 5);
 		
 		this.random = new Random();
 		this.pPickup = discount;
@@ -75,24 +75,28 @@ public class Reactive implements ReactiveBehavior {
 	}
 
 	@Override
-	public Action act(Vehicle vehicle, Task availableTask) {
-		//TO DO 
-				
+	public Action act(Vehicle vehicle, Task availableTask) {				
 		Action action;
-		
+				
 		State currentState = new State(vehicle.getCurrentCity());
+		RoadAction bestAction = bestActions.get(currentState);
+		int counter = 0;
+		for (Map.Entry<State, RoadAction> entry : bestActions.entrySet()) {
+			RoadAction a = entry.getValue();
+			if (a == null) {
+				counter++;
+			}
+		}
+		System.out.println("Counter is = " + counter);
 		
-		if(availableTask != null) {
+		System.out.println("Best action's next city = " + bestAction.getNextCity());
+		if(availableTask != null && bestAction.getActionType() == RoadActionType.PICKUP) {
 			currentState.setDestinationCity(availableTask.deliveryCity);
 		}
-		
-		RoadAction bestAction = bestActions.get(currentState);
-		
 		
 		if (currentState.getTask()) {
 			action = new Pickup(availableTask);
 		} else {
-			
 			action = new Move(bestAction.getNextCity());
 		}
 		
@@ -106,18 +110,30 @@ public class Reactive implements ReactiveBehavior {
 	
 	public void reinforcementLearningAlgorithm(TaskDistribution td) {
 		boolean not_converged = true;
-		while (true) {
+		while (not_converged) {
 			HashMap<State, Double> previous_V_table = new HashMap<State, Double> (vTable);
 
 			for (State state : qTable.keySet()) {
-				for (RoadAction action : qTable.get(state).keySet()) {			
-					double value = rTable.get(state).get(action) + discountedSum(td, state, action);
-					qTable.get(state).put(action, value);
+				for (RoadAction action : qTable.get(state).keySet()) {		
+					if (rTable.containsKey(state)) {
+						if (rTable.get(state).containsKey(action)) {
+							double value = rTable.get(state).get(action) + discountedSum(td, state, action);
+							qTable.get(state).put(action, value);
+						}
+					}
 				}
 				//Find best action (java 8 implementation)
-				RoadAction bestAction = qTable.get(state).entrySet().stream().max((entry1, entry2) -> entry1.getValue() > entry2.getValue() ? 1 : -1).get().getKey();
-				Double bestValue = qTable.get(state).get(bestAction);
-
+				// RoadAction bestAction = qTable.get(state).entrySet().stream().max((entry1, entry2) -> entry1.getValue() > entry2.getValue() ? 1 : -1).get().getKey();
+				HashMap<RoadAction, Double> values = qTable.get(state);
+				RoadAction bestAction = null;
+				double bestValue = 0.0;
+				for (Map.Entry<RoadAction, Double> entry : values.entrySet()) {
+					if (entry.getValue() > bestValue) {
+						bestValue = entry.getValue();
+						bestAction = entry.getKey();
+					}
+				}
+				
 				vTable.put(state, bestValue);
 				bestActions.put(state, bestAction);
 			}
@@ -149,9 +165,12 @@ public class Reactive implements ReactiveBehavior {
 	
 	public double discountedSum(TaskDistribution td, State state, RoadAction action) {
 		double sum = 0.0;
-		
 		for (State state_iter : this.possibleStates) {
-			sum += transitionProbability(td, state, action, state_iter) * vTable.get(state_iter);
+			double tp = transitionProbability(td, state, action, state_iter);
+			sum += tp * vTable.get(state_iter);
+			if (vTable.get(state_iter) != 0.0 && tp != 0.0) {
+				System.out.println("TP = " + tp + " :: vTable = " + vTable.get(state_iter));
+			}
 		}
 		
 		sum = this.pPickup * sum;
@@ -173,6 +192,7 @@ public class Reactive implements ReactiveBehavior {
 	
 	// Initialize Tables
 	private void initQTable() {
+		qTable = new HashMap<State, HashMap<RoadAction, Double>>();
 		for (State state : this.possibleStates) {
 			qTable.put(state, new HashMap<RoadAction, Double>());
 			for (RoadAction action : this.possibleActions) {		
@@ -182,12 +202,15 @@ public class Reactive implements ReactiveBehavior {
 	}
 	
 	private void initVTable() {
+	    Random randomno = new Random();
+		vTable = new HashMap<State, Double>();
 		for (State state : this.possibleStates) {
-			vTable.put(state, 0.0);
+			vTable.put(state, randomno.nextDouble());
 		}
 	}
 	
 	private void initBestActionsTable() {
+		bestActions = new HashMap<State, RoadAction>();
 		for (State state : this.possibleStates) {
 			bestActions.put(state, null);
 		}

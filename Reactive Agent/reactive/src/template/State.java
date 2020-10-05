@@ -32,6 +32,7 @@ public class State {
 	
 	public void setDestinationCity(City destinationCity) {
 		this.destinationCity = destinationCity;
+		this.task = true;
 	}
 
 	public City getDestinationCity() {

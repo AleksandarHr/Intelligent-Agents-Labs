@@ -116,14 +116,29 @@ public class Reactive implements ReactiveBehavior {
 		}
 	}
 	
-	public double transitionProbability(TaskDistribution td, State s1, RoadAction a, State s2) {
-		//TO DO
+	public double transitionProbability(TaskDistribution td, State s1, RoadAction action, State s2) {
 		double probability = 0.0;
-		if(s2.getDestinationCity() == s2.getCurrentCity()) {
-			probability = 0.0;
-		} else {
-			
+				
+		if (action.getActionType() == RoadActionType.MOVE) {
+			// check if the action is legal
+			if (s1.getCurrentCity().neighbors().contains(action.getNextCity()) && action.getNextCity() == s2.getCurrentCity()) {
+				if (s2.getDestinationCity() == null) {
+					// We will not be able to pickup when we get to s2
+				} else {
+					// We will be able to pickup when we get to s2
+				}
+			}
+		} else if (action.getActionType() == RoadActionType.PICKUP) {
+			// check if pickup action is legal
+			if (s1.getDestinationCity() != null && s1.getDestinationCity() == s2.getCurrentCity()) {
+				if (s2.getDestinationCity() == null) {
+					// We will not be able to pickup when we get to s2 
+				} else {
+					// We will be able to pickup when we get to s2 (after we drop off this task at s2's currentCity)
+				}
+			}
 		}
+		
 		return probability;
 	}
 	

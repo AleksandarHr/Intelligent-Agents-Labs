@@ -77,27 +77,16 @@ public class Reactive implements ReactiveBehavior {
 	@Override
 	public Action act(Vehicle vehicle, Task availableTask) {				
 		Action action;
-
-		State currentState = new State(vehicle.getCurrentCity());
+			
+		State currentState;
+		if (availableTask != null) {
+			currentState = new State(vehicle.getCurrentCity(), availableTask.deliveryCity);
+		} else {
+			currentState = new State(vehicle.getCurrentCity());			
+		}
 		RoadAction bestAction = bestActions.get(currentState);
-		if (bestAction == null) {
-		System.out.println("INIT = " + currentState.getCurrentCity() + " :: INIT Dest = " + currentState.getDestinationCity());
-		}
-		for (Map.Entry<State, RoadAction> entry: bestActions.entrySet()) {
-		//	System.out.println("Curr = " + entry.getKey().getCurrentCity() + " :: Dest = " + entry.getKey().getDestinationCity());
-		}
 		
-		int counter = 0;
-		for (Map.Entry<State, RoadAction> entry : bestActions.entrySet()) {
-			RoadAction a = entry.getValue();
-			if (a == null) {
-				System.out.println("Curr = " + entry.getKey().getCurrentCity() + " :: Dest = " + entry.getKey().getDestinationCity());
-				counter++;
-			}
-		}
-		
-		System.out.println("Best action's next city = " + bestAction.getNextCity());
-		if(availableTask != null && bestAction.getActionType() == RoadActionType.PICKUP) {
+		if(bestAction.getActionType() == RoadActionType.PICKUP) {
 			currentState.setDestinationCity(availableTask.deliveryCity);
 		}
 		
@@ -130,8 +119,6 @@ public class Reactive implements ReactiveBehavior {
 						}
 					}
 				}
-				//Find best action (java 8 implementation)
-				// RoadAction bestAction = qTable.get(state).entrySet().stream().max((entry1, entry2) -> entry1.getValue() > entry2.getValue() ? 1 : -1).get().getKey();
 				HashMap<RoadAction, Double> values = qTable.get(state);
 				RoadAction bestAction = null;
 				double bestValue = 0.0;
@@ -144,7 +131,6 @@ public class Reactive implements ReactiveBehavior {
 				vTable.put(state, bestValue);
 				bestActions.put(state, bestAction);
 			}
-			
 			if (converged(previous_V_table, vTable)) {
 				not_converged = false;
 			}
@@ -188,14 +174,13 @@ public class Reactive implements ReactiveBehavior {
 	public boolean converged(HashMap<State, Double> previous_V_table, HashMap<State, Double> current_V_table) {
 		double max = 0.0;
 		for (State state : previous_V_table.keySet()) {
-			//System.out.println("Previous value: " + previous_V_table.get(state) + " Next value: " + current_V_table.get(state));
 			double difference = Math.abs(previous_V_table.get(state) - current_V_table.get(state));
 			if (difference > max) {
 				max = difference;
 			}
 		}
 		
-		//System.out.println(max);
+		System.out.println(max);
 		return max < 0.001;
 	}
 	
@@ -255,12 +240,8 @@ public class Reactive implements ReactiveBehavior {
 	// HELPER FUNCTIONS
 	private void initPossibleActions(List<City> cities) {
 		for (City city : cities) {
-			for (City nextCity : city.neighbors()) {
-				// Should we only add neighboring cities for the move action?
-				// TODO: No ^, we don't have a notion of current city here, so just add all cities
-				this.possibleActions.add(new RoadAction(nextCity, RoadActionType.MOVE));
-				this.possibleActions.add(new RoadAction(nextCity, RoadActionType.PICKUP));
-			}
+			this.possibleActions.add(new RoadAction(city, RoadActionType.MOVE));
+			this.possibleActions.add(new RoadAction(city, RoadActionType.PICKUP));
 		}
 	}
 	

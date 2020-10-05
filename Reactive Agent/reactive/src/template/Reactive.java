@@ -74,18 +74,25 @@ public class Reactive implements ReactiveBehavior {
 
 	@Override
 	public Action act(Vehicle vehicle, Task availableTask) {
-		//TO DO
+		//TO DO 
+		
 		Action action;
-		action = new Pickup(availableTask);
-
-//		if (availableTask == null || random.nextDouble() > pPickup) {
-//			City currentCity = vehicle.getCurrentCity();
-//			action = new Move(currentCity.randomNeighbor(random));
-//			System.out.println("Leave the task and MOVE to neighbor city");
-//		} else {
-//			action = new Pickup(availableTask);
-//			System.out.println("PICKUP the task");
-//		}
+		
+		State currentState = new State(vehicle.getCurrentCity());
+		
+		if(availableTask != null) {
+			currentState.setDestinationCity(availableTask.deliveryCity);
+		}
+		
+		RoadAction bestAction = bestActions.get(currentState);
+		
+		
+		if (currentState.getTask()) {
+			action = new Pickup(availableTask);
+		} else {
+			
+			action = new Move(bestAction.getNextCity());
+		}
 		
 		if (numActions >= 1) {
 			System.out.println("The total profit after "+numActions+" actions is "+myAgent.getTotalProfit()+" (average profit: "+(myAgent.getTotalProfit() / (double)numActions)+")");
@@ -96,6 +103,7 @@ public class Reactive implements ReactiveBehavior {
 	}
 	
 	public void reinforcementLearningAlgorithm(TaskDistribution td) {
+		boolean not_converged = true;
 		while (true) {
 			HashMap<State, Double> previous_V_table = new HashMap<State, Double> (vTable);
 
@@ -112,7 +120,9 @@ public class Reactive implements ReactiveBehavior {
 				bestActions.put(state, bestAction);
 			}
 			
-			if (converged(previous_V_table, vTable)) break;
+			if (converged(previous_V_table, vTable)) {
+				not_converged = false;
+			}
 		}
 	}
 	
@@ -170,8 +180,7 @@ public class Reactive implements ReactiveBehavior {
 	private void initQTable() {
 		for (State state : this.possibleStates) {
 			qTable.put(state, new HashMap<RoadAction, Double>());
-			for (RoadAction action : this.possibleActions) {
-				//TO DO implement to skips some states			
+			for (RoadAction action : this.possibleActions) {		
 				qTable.get(state).put(action, 0.0);
 			}
 		}
@@ -195,18 +204,19 @@ public class Reactive implements ReactiveBehavior {
 			HashMap<RoadAction, Double> stateRewards = new HashMap<RoadAction, Double>();
 			
 			for (RoadAction action : this.possibleActions) {
+				double reward = 0.0;
 				City currentCity = state.getCurrentCity();
 				City actionNextCity = action.getNextCity();
 				if (action.getActionType() == RoadActionType.MOVE) {
 					if (actionNextCity != null && currentCity.hasNeighbor(actionNextCity)) {
 						// Reward is negative - only cost for moving to next city
-						double reward = (-1.0)* currentCity.distanceTo(actionNextCity) * v.costPerKm();
+						reward -= currentCity.distanceTo(actionNextCity) * v.costPerKm();
 						stateRewards.put(action, reward);
 					}
 				} else if (action.getActionType() == RoadActionType.PICKUP) {
 					if (state.getDestinationCity() != null) {
 						// Only allowed to pickup if we have a destination city?
-						double reward = (double) td.reward(currentCity, state.getDestinationCity()) - currentCity.distanceTo(state.getDestinationCity());
+						reward += td.reward(currentCity, state.getDestinationCity()) - currentCity.distanceTo(state.getDestinationCity());
 						stateRewards.put(action, reward);
 					}
 				}		

@@ -40,7 +40,9 @@ public class Reactive implements ReactiveBehavior {
     private HashMap<State, RoadAction> bestActions;
 	// Reward table
 	private Map<State, HashMap<RoadAction, Double>> rTable;
-
+	// A mapping of probabilities that there is a task from a given city
+	private Map<City, Double> totalTaskProbabilities;
+	
 	@Override
 	public void setup(Topology topology, TaskDistribution td, Agent agent) {
 
@@ -187,8 +189,8 @@ public class Reactive implements ReactiveBehavior {
 						stateRewards.put(action, reward);
 					}
 				} else if (action.getActionType() == RoadActionType.PICKUP) {
-					if (state.getDestinationCity() == null) {
-						// Only allowed to pickup if we don't have a destination city already (e.g. if we haven't already picked up a task)
+					if (state.getDestinationCity() != null) {
+						// Only allowed to pickup if we have a destination city?
 						double reward = (double) td.reward(currentCity, state.getDestinationCity()) - currentCity.distanceTo(state.getDestinationCity());
 						stateRewards.put(action, reward);
 					}
@@ -203,6 +205,7 @@ public class Reactive implements ReactiveBehavior {
 		for (City city : cities) {
 			for (City nextCity : city.neighbors()) {
 				// Should we only add neighboring cities for the move action?
+				// TODO: No ^, we don't have a notion of current city here, so just add all cities
 				this.possibleActions.add(new RoadAction(nextCity, RoadActionType.MOVE));
 			}
 		}
@@ -218,6 +221,18 @@ public class Reactive implements ReactiveBehavior {
 					this.possibleStates.add(new State(city1, city2));
 				}
 			}
+		}
+	}
+	
+	private void initTotalTaskProbabilities(List<City> cities, TaskDistribution td) {
+		for (City from : cities) {
+			double totalProbability = 0.0;
+			for (City to : cities) {
+				if (from != to) {
+					totalProbability += td.probability(from, to);
+				}
+			}
+			this.totalTaskProbabilities.put(from, totalProbability);
 		}
 	}
 }

@@ -22,6 +22,34 @@ public class RoadAction {
 		this.actionChosen = actionChosen;
 	}
 
+	@Override
+	public int hashCode() {
+		final int prime = 31;
+		int result = 1;
+		result = prime * result + ((actionChosen == null) ? 0 : actionChosen.hashCode());
+		result = prime * result + ((nextCity == null) ? 0 : nextCity.hashCode());
+		return result;
+	}
+
+	@Override
+	public boolean equals(Object obj) {
+		if (this == obj)
+			return true;
+		if (obj == null)
+			return false;
+		if (getClass() != obj.getClass())
+			return false;
+		RoadAction other = (RoadAction) obj;
+		if (actionChosen != other.actionChosen)
+			return false;
+		if (nextCity == null) {
+			if (other.nextCity != null)
+				return false;
+		} else if (!nextCity.equals(other.nextCity))
+			return false;
+		return true;
+	}
+
 	public boolean isDelivery() {
 		return nextCity == null;
 	}

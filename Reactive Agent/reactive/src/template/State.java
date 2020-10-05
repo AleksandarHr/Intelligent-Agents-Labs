@@ -27,6 +27,28 @@ public class State {
 		this.currentCity = currentCity;
 	}
 
+	@Override
+	public boolean equals(Object obj) {
+		if (this == obj)
+			return true;
+		if (obj == null)
+			return false;
+		if (getClass() != obj.getClass())
+			return false;
+		State other = (State) obj;
+		if (currentCity == null) {
+			if (other.currentCity != null)
+				return false;
+		} else if (!currentCity.equals(other.currentCity))
+			return false;
+		if (destinationCity == null) {
+			if (other.destinationCity != null)
+				return false;
+		} else if (!destinationCity.equals(other.destinationCity))
+			return false;
+		return true;
+	}
+
 	public City getCurrentCity() {
 		return currentCity;
 	}
@@ -46,7 +68,11 @@ public class State {
 	
 	@Override
 	public int hashCode() {
-		return Objects.hash(currentCity, destinationCity);
+		final int prime = 31;
+		int result = 1;
+		result = prime * result + ((currentCity == null) ? 0 : currentCity.hashCode());
+		result = prime * result + ((destinationCity == null) ? 0 : destinationCity.hashCode());
+		return result;
 	}
 
 }

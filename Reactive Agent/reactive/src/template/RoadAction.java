@@ -22,6 +22,23 @@ public class RoadAction {
 		this.actionChosen = actionChosen;
 	}
 
+	public boolean isDelivery() {
+		return nextCity == null;
+	}
+	
+
+	public void setNeighborCity(City nextCity) {
+		this.nextCity = nextCity;
+	}
+	
+	public City getNextCity() {
+		return nextCity;
+	}
+	
+	public RoadActionType getActionType() {
+		return actionChosen;
+	}
+	
 	@Override
 	public int hashCode() {
 		final int prime = 31;
@@ -48,22 +65,5 @@ public class RoadAction {
 		} else if (!nextCity.equals(other.nextCity))
 			return false;
 		return true;
-	}
-
-	public boolean isDelivery() {
-		return nextCity == null;
-	}
-	
-
-	public void setNeighborCity(City nextCity) {
-		this.nextCity = nextCity;
-	}
-	
-	public City getNextCity() {
-		return nextCity;
-	}
-	
-	public RoadActionType getActionType() {
-		return actionChosen;
 	}
 }

@@ -109,8 +109,14 @@ public class Reactive implements ReactiveBehavior {
 				double bestValue = 0.0;
 				for (Map.Entry<RoadAction, Double> entry : values.entrySet()) {
 					if (entry.getValue() >= bestValue) {
-						bestValue = entry.getValue();
-						bestAction = entry.getKey();
+						if ( (entry.getKey().getActionType() == RoadActionType.MOVE
+								&&
+								state.getCurrentCity().neighbors().contains(entry.getKey().getNextCity())
+							  ) ||
+								entry.getKey().getActionType() == RoadActionType.PICKUP) {
+							bestValue = entry.getValue();
+							bestAction = entry.getKey();
+						}
 					}
 				}
 
@@ -189,9 +195,13 @@ public class Reactive implements ReactiveBehavior {
 		RoadAction bestAction = bestActions.get(currentState);
 		
 		if(bestAction.getActionType() == RoadActionType.PICKUP) {
-			currentState.setDestinationCity(availableTask.deliveryCity);
-			action = new Pickup(availableTask);
-		} else {
+			if (availableTask != null) {
+				currentState.setDestinationCity(availableTask.deliveryCity);
+				action = new Pickup(availableTask);
+			} else {
+				action = new Move(vehicle.getCurrentCity().randomNeighbor(random));
+			}
+		} else {			
 			action = new Move(bestAction.getNextCity());	
 		}
 		
@@ -211,10 +221,7 @@ public class Reactive implements ReactiveBehavior {
 			action = new Pickup(availableTask);
 		} else {
 			currentState = new State(vehicle.getCurrentCity());		
-			List<City> neighbors = vehicle.getCurrentCity().neighbors();
-		    Random rand = new Random(); 
-		    int randomNeighborIndex = rand.nextInt(neighbors.size()); 
-			action = new Move(neighbors.get(randomNeighborIndex));
+			action = new Move(vehicle.getCurrentCity().randomNeighbor(random));
 		}
 		
 		return action;
@@ -231,6 +238,7 @@ public class Reactive implements ReactiveBehavior {
 			action = new Move(currentCity.randomNeighbor(random));
 		} else {
 			action = new Pickup(availableTask);
+
 		}
 		return action;
 	}
@@ -248,10 +256,9 @@ public class Reactive implements ReactiveBehavior {
 	
 	// Initialize V-table with random values between 0.0 and 1.0
 	private void initVTable() {
-	    Random randomno = new Random();
 		vTable = new HashMap<State, Double>();
 		for (State state : this.possibleStates) {
-			vTable.put(state, randomno.nextDouble());
+			vTable.put(state, random.nextDouble());
 		}
 	}
 	

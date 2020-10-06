@@ -25,7 +25,6 @@ public class Reactive implements ReactiveBehavior {
 
 	private Random random;
 	private double pPickup;
-	//private int costPerKm;
 	private int numActions;
 	private Agent myAgent;
 	
@@ -48,11 +47,9 @@ public class Reactive implements ReactiveBehavior {
 		// Reads the discount factor from the agents.xml file.
 		// If the property is not present it defaults to 0.95
 		Double discount = agent.readProperty("discount-factor", Double.class, 0.95);
-		// Integer costPerKm = agent.readProperty("cost-per-km", Integer.class, 5);
 		
 		this.random = new Random();
 		this.pPickup = discount;
-		//this.costPerKm = costPerKm;
 		this.numActions = 0;
 		this.myAgent = agent;
 		this.allCities = topology.cities();
@@ -72,8 +69,15 @@ public class Reactive implements ReactiveBehavior {
 	
 	@Override
 	public Action act(Vehicle vehicle, Task availableTask) {				
+		Action action;
 		
-		Action action = intelligentAgentAct(vehicle, availableTask);
+		if (vehicle.name().equals("Intelligent Vehicle")) {
+			action = intelligentAgentAct(vehicle, availableTask);
+		} else if (vehicle.name().equals("Dummy Vehicle")) {
+			action = dummyAgentAct(vehicle, availableTask);
+		} else {
+			action = randomAgentAct(vehicle, availableTask);
+		}
 				
 		if (numActions >= 1) {
 			System.out.println("The total profit after "+numActions+" actions is "+myAgent.getTotalProfit()+" (average profit: "+(myAgent.getTotalProfit() / (double)numActions)+")");
@@ -123,18 +127,17 @@ public class Reactive implements ReactiveBehavior {
 	 */
 	public double transitionProbability(TaskDistribution td, State s1, RoadAction action, State s2) {
 		double probability = 0.0;
-		System.out.println("Action = " + action.getActionType() + " :: Curr = " + s1.getCurrentCity() + " :: Dest = " + s1.getDestinationCity());
+		//System.out.println("Action = " + action.getActionType() + " :: Curr = " + s1.getCurrentCity() + " :: Dest = " + s1.getDestinationCity());
 
 		if (action.getActionType() == RoadActionType.MOVE) {
 			// check if the action is legal
-			City destination = s1.getDestinationCity();
-			if (destination == null && action.getNextCity() == s2.getCurrentCity() && s1.getCurrentCity().neighbors().contains(action.getNextCity())) {
+			if (s1.getDestinationCity() == null && action.getNextCity() == s2.getCurrentCity() && s1.getCurrentCity().neighbors().contains(action.getNextCity())) {
 				double temp = this.highestTaskPotentialCurrent(action.getNextCity(), td);
 				probability = this.highestTaskPotentialNeighbour(s1.getCurrentCity().neighbors(), td);
 			}
 		} else if (action.getActionType() == RoadActionType.PICKUP) {
 			// check if pickup action is legal
-			if (s1.getDestinationCity() == null && action.getNextCity() == s2.getCurrentCity()) {
+			if (s1.getDestinationCity() != null && action.getNextCity() == s2.getCurrentCity()) {
 				probability = td.probability(s1.getCurrentCity(), action.getNextCity());
 			}
 		}
@@ -215,6 +218,21 @@ public class Reactive implements ReactiveBehavior {
 			action = new Move(neighbors.get(randomNeighborIndex));
 		}
 		
+		return action;
+	}
+	
+	/*
+	 * Random agent's act
+	 */
+	private Action randomAgentAct(Vehicle vehicle, Task availableTask) {
+		Action action;
+
+		if (availableTask == null || random.nextDouble() > pPickup) {
+			City currentCity = vehicle.getCurrentCity();
+			action = new Move(currentCity.randomNeighbor(random));
+		} else {
+			action = new Pickup(availableTask);
+		}
 		return action;
 	}
 	

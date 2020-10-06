@@ -33,7 +33,7 @@
 	
 		<company name="Company A">
 			<!-- the first vehicle (blue) -->
-			<vehicle name="Vehicle 1">
+			<vehicle name="Intelligent Vehicle">
 				<set color="#0000ff" />
 				<set home="Amsterdam" />
 				<set speed="90" />
@@ -44,7 +44,7 @@
 		
 		<company name="Company B">
 			<!-- the second vehicle (red) -->
-			<vehicle name="Vehicle 2">
+			<vehicle name="Dummy Vehicle">
 				<set color="#ff0000" />
 				<set home="Eindhoven" />
 				<set speed="90" />
@@ -55,7 +55,7 @@
 				
 		<company name="Company C">
 			<!-- the third vehicle (green) -->
-			<vehicle name="Vehicle 3">
+			<vehicle name="Random Vehicle">
 				<set color="#00ff00" />
 				<set home="Den Haag" />
 				<set speed="90" />

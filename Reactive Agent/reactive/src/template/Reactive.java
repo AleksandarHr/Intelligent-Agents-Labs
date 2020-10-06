@@ -73,6 +73,8 @@ public class Reactive implements ReactiveBehavior {
 		
 		if (vehicle.name().equals("Intelligent Vehicle")) {
 			action = intelligentAgentAct(vehicle, availableTask);
+			System.out.println(vehicle.costPerKm());
+
 		} else if (vehicle.name().equals("Dummy Vehicle")) {
 			action = dummyAgentAct(vehicle, availableTask);
 		} else {
@@ -109,6 +111,7 @@ public class Reactive implements ReactiveBehavior {
 				double bestValue = 0.0;
 				for (Map.Entry<RoadAction, Double> entry : values.entrySet()) {
 					if (entry.getValue() >= bestValue) {
+						// only update if the action is legal
 						if ( (entry.getKey().getActionType() == RoadActionType.MOVE
 								&&
 								state.getCurrentCity().neighbors().contains(entry.getKey().getNextCity())
@@ -170,7 +173,6 @@ public class Reactive implements ReactiveBehavior {
 	public boolean converged(HashMap<State, Double> previousVTable, HashMap<State, Double> currentVTable) {
 		double max = 0.0;
 		for (State state : previousVTable.keySet()) {
-			//System.out.println("Previous = " + previousVTable.get(state) + " :: Current = " + currentVTable.get(state));
 			double difference = Math.abs(previousVTable.get(state) - currentVTable.get(state));
 			if (difference > max) {
 				max = difference;
@@ -179,6 +181,37 @@ public class Reactive implements ReactiveBehavior {
 		return max < 0.001;
 	}
 	
+	/*
+	 * Initialize the reward table based on the task distribution probabilities
+	 */
+	private void initRTable(TaskDistribution td, Vehicle v) {
+		//Initialize R table
+		for (State state : this.possibleStates) {
+			HashMap<RoadAction, Double> stateRewards = new HashMap<RoadAction, Double>();
+			
+			for (RoadAction action : this.possibleActions) {
+				double reward = 0.0;
+				City currentCity = state.getCurrentCity();
+				City actionNextCity = action.getNextCity();
+				if (action.getActionType() == RoadActionType.MOVE && state.getDestinationCity() == null) {
+					if (actionNextCity != null && currentCity.hasNeighbor(actionNextCity)) {
+						// Legal MOVE action, reward is negative - only cost for moving to next city
+						reward -= currentCity.distanceTo(actionNextCity) * v.costPerKm();
+						stateRewards.put(action, reward);
+					}
+				} else if (action.getActionType() == RoadActionType.PICKUP && state.getDestinationCity() != null) {
+					if (action.getNextCity() == state.getDestinationCity()) {
+						// Legal PICKUP action, reward is (profit from delivery - travel cost)						
+						reward += td.reward(currentCity, state.getDestinationCity()) - currentCity.distanceTo(state.getDestinationCity());
+						stateRewards.put(action, reward);
+					}		
+				}
+			}
+			this.rTable.put(state, stateRewards);
+		}
+	}
+	
+	// Agent's Behaviors
 	/*
 	 * Intelligent agent's act - decides on an action depending on the state-based best action learnt offline
 	 */
@@ -266,36 +299,6 @@ public class Reactive implements ReactiveBehavior {
 		bestActions = new HashMap<State, RoadAction>();
 		for (State state : this.possibleStates) {
 			bestActions.put(state, null);
-		}
-	}
-	
-	/*
-	 * Initialize the reward table based on the task distribution probabilities
-	 */
-	private void initRTable(TaskDistribution td, Vehicle v) {
-		//Initialize R table
-		for (State state : this.possibleStates) {
-			HashMap<RoadAction, Double> stateRewards = new HashMap<RoadAction, Double>();
-			
-			for (RoadAction action : this.possibleActions) {
-				double reward = 0.0;
-				City currentCity = state.getCurrentCity();
-				City actionNextCity = action.getNextCity();
-				if (action.getActionType() == RoadActionType.MOVE && state.getDestinationCity() == null) {
-					if (actionNextCity != null && currentCity.hasNeighbor(actionNextCity)) {
-						// Reward is negative - only cost for moving to next city
-						reward -= currentCity.distanceTo(actionNextCity) * v.costPerKm();
-						stateRewards.put(action, reward);
-					}
-				} else if (action.getActionType() == RoadActionType.PICKUP && state.getDestinationCity() != null) {
-					if (action.getNextCity() == state.getDestinationCity()) {
-						// Only allowed to pickup if we do not already have a destination city						
-						reward += td.reward(currentCity, state.getDestinationCity()) - currentCity.distanceTo(state.getDestinationCity());
-						stateRewards.put(action, reward);
-					}		
-				}
-			}
-			this.rTable.put(state, stateRewards);
 		}
 	}
 	

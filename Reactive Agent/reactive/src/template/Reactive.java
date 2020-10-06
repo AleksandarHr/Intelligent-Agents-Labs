@@ -132,7 +132,7 @@ public class Reactive implements ReactiveBehavior {
 		if (action.getActionType() == RoadActionType.MOVE) {
 			// check if the action is legal
 			if (s1.getDestinationCity() == null && action.getNextCity() == s2.getCurrentCity() && s1.getCurrentCity().neighbors().contains(action.getNextCity())) {
-				probability = this.highestTaskPotentialNeighbour(s1.getCurrentCity().neighbors(), td);
+				probability = this.highestTaskPotentialNeighbour(action.getNextCity(), td);
 			}
 		} else if (action.getActionType() == RoadActionType.PICKUP) {
 			// check if pickup action is legal
@@ -312,13 +312,11 @@ public class Reactive implements ReactiveBehavior {
 		}
 	}
 	
-	private double highestTaskPotentialNeighbour(List<City> neighbors, TaskDistribution td) {
+	private double highestTaskPotentialNeighbour(City neighbor, TaskDistribution td) {
 		double max = 0.0;
-		for (City n : neighbors) {
-			for (City c : this.allCities) {
-				if (n != c) {
-					max = Math.max(max, td.probability(n, c));
-				}
+		for (City c : this.allCities) {
+			if (neighbor != c) {
+				max = Math.max(max, td.probability(neighbor, c));
 			}
 		}	
 		return max;

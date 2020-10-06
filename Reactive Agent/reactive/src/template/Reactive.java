@@ -47,17 +47,17 @@ public class Reactive implements ReactiveBehavior {
 		// Reads the discount factor from the agents.xml file.
 		// If the property is not present it defaults to 0.95
 		Double discount = agent.readProperty("discount-factor", Double.class, 0.95);
-		
+
 		this.random = new Random();
 		this.pPickup = discount;
 		this.numActions = 0;
 		this.myAgent = agent;
 		this.allCities = topology.cities();
-		
+
 		//This should be changed based on the action/state implementation
 		initPossibleActions(topology.cities());
 		initPossibleStates(topology.cities());
-		
+
 		//Populate the tables
 		initQTable();
 		initVTable();
@@ -113,6 +113,7 @@ public class Reactive implements ReactiveBehavior {
 						bestAction = entry.getKey();
 					}
 				}
+
 				vTable.put(state, bestValue);
 				bestActions.put(state, bestAction);
 			}
@@ -131,8 +132,7 @@ public class Reactive implements ReactiveBehavior {
 		if (action.getActionType() == RoadActionType.MOVE) {
 			// check if the action is legal
 			if (s1.getDestinationCity() == null && action.getNextCity() == s2.getCurrentCity() && s1.getCurrentCity().neighbors().contains(action.getNextCity())) {
-				probability = this.taskPotentialProbability(action.getNextCity(), s1.getCurrentCity().neighbors(), td);
-				//probability = this.highestTaskPotentialNeighbour(s1.getCurrentCity().neighbors(), td);
+				probability = this.highestTaskPotentialNeighbour(s1.getCurrentCity().neighbors(), td);
 			}
 		} else if (action.getActionType() == RoadActionType.PICKUP) {
 			// check if pickup action is legal
@@ -164,12 +164,12 @@ public class Reactive implements ReactiveBehavior {
 	public boolean converged(HashMap<State, Double> previousVTable, HashMap<State, Double> currentVTable) {
 		double max = 0.0;
 		for (State state : previousVTable.keySet()) {
+			//System.out.println("Previous = " + previousVTable.get(state) + " :: Current = " + currentVTable.get(state));
 			double difference = Math.abs(previousVTable.get(state) - currentVTable.get(state));
 			if (difference > max) {
 				max = difference;
 			}
 		}
-		
 		return max < 0.001;
 	}
 	
@@ -312,26 +312,15 @@ public class Reactive implements ReactiveBehavior {
 		}
 	}
 	
-	/*
-	 * Given a chosen neighbor and all neighboring cities, returns the ration between the probability of the 
-	 * chosen neighbor having a task and the total probability of all neighbors having a task 
-	 */
-	private double taskPotentialProbability(City chosenNeighbor, List<City> allNeighbors, TaskDistribution td) {
-		double totalNeighborsPotential = 0.0;
-		double chosenNeighborPotential = 0.0;
-		
-		for (City n : allNeighbors) {
+	private double highestTaskPotentialNeighbour(List<City> neighbors, TaskDistribution td) {
+		double max = 0.0;
+		for (City n : neighbors) {
 			for (City c : this.allCities) {
 				if (n != c) {
-					totalNeighborsPotential += td.probability(n, c);
+					max = Math.max(max, td.probability(n, c));
 				}
 			}
-		}
-		
-		for (City c : this.allCities) {
-			chosenNeighborPotential += td.probability(chosenNeighbor, c);
-		}
-		
-		return chosenNeighborPotential/totalNeighborsPotential;
+		}	
+		return max;
 	}
 }

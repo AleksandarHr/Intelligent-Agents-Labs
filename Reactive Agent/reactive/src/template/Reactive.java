@@ -127,13 +127,12 @@ public class Reactive implements ReactiveBehavior {
 	 */
 	public double transitionProbability(TaskDistribution td, State s1, RoadAction action, State s2) {
 		double probability = 0.0;
-		//System.out.println("Action = " + action.getActionType() + " :: Curr = " + s1.getCurrentCity() + " :: Dest = " + s1.getDestinationCity());
 
 		if (action.getActionType() == RoadActionType.MOVE) {
 			// check if the action is legal
 			if (s1.getDestinationCity() == null && action.getNextCity() == s2.getCurrentCity() && s1.getCurrentCity().neighbors().contains(action.getNextCity())) {
-				double temp = this.highestTaskPotentialCurrent(action.getNextCity(), td);
-				probability = this.highestTaskPotentialNeighbour(s1.getCurrentCity().neighbors(), td);
+				probability = this.taskPotentialProbability(action.getNextCity(), s1.getCurrentCity().neighbors(), td);
+				//probability = this.highestTaskPotentialNeighbour(s1.getCurrentCity().neighbors(), td);
 			}
 		} else if (action.getActionType() == RoadActionType.PICKUP) {
 			// check if pickup action is legal
@@ -314,29 +313,25 @@ public class Reactive implements ReactiveBehavior {
 	}
 	
 	/*
-	 * Given a list of neighboring cities and the task probability distribution, return the maximum
-	 * probability 
+	 * Given a chosen neighbor and all neighboring cities, returns the ration between the probability of the 
+	 * chosen neighbor having a task and the total probability of all neighbors having a task 
 	 */
-	private double highestTaskPotentialNeighbour(List<City> neighbors, TaskDistribution td) {
-		double max = 0.0;
-		for (City n : neighbors) {
+	private double taskPotentialProbability(City chosenNeighbor, List<City> allNeighbors, TaskDistribution td) {
+		double totalNeighborsPotential = 0.0;
+		double chosenNeighborPotential = 0.0;
+		
+		for (City n : allNeighbors) {
 			for (City c : this.allCities) {
 				if (n != c) {
-					max = Math.max(max, td.probability(n, c));
+					totalNeighborsPotential += td.probability(n, c);
 				}
-			}
-		}	
-		return max;
-	}
-	
-	private double highestTaskPotentialCurrent(City current, TaskDistribution td) {
-		double max = 0.0;
-		for (City c : this.allCities) {
-			if (current != c) {
-				max = Math.max(max, td.probability(current, c));
 			}
 		}
 		
-		return max;
+		for (City c : this.allCities) {
+			chosenNeighborPotential += td.probability(chosenNeighbor, c);
+		}
+		
+		return chosenNeighborPotential/totalNeighborsPotential;
 	}
 }

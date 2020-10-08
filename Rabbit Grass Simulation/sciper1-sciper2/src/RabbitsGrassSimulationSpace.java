@@ -13,11 +13,11 @@ public class RabbitsGrassSimulationSpace {
 	
 	// Constructor for the simulation space object
 	public RabbitsGrassSimulationSpace (int size) {
-		// Initialize the grass and rabits grid objects
+		// Initialize the grass and rabbits grid objects
 		this.grassSpace = new Object2DGrid(size, size);
 		this.rabbitsSpace = new Object2DGrid(size, size);
 		
-		// Initialize the grass grid celss
+		// Initialize the grass grid cells
 		for (int x = 0; x < size; x++) {
 			for (int y = 0; y < size; y++) {
 				grassSpace.putObjectAt(x, y, Integer.valueOf(0));
@@ -41,7 +41,7 @@ public class RabbitsGrassSimulationSpace {
 				// If there is already grass present at (grassX, grassY), accumulate the energy of old and new grass
 				if (this.isGrassSpaceCellOccupied(grassX, grassY)) {
 					int currentGrass = (int) grassSpace.getValueAt(grassX, grassY);
-					newGrassEnergy = (newGrassEnergy + currentGrass) % maxGrassEnergy;
+					newGrassEnergy = Math.min(newGrassEnergy + currentGrass, maxGrassEnergy);
 				}
 				grassSpace.putObjectAt(grassX, grassY, Integer.valueOf(newGrassEnergy));
 			}
@@ -79,6 +79,7 @@ public class RabbitsGrassSimulationSpace {
 		        agent.setRabbitsGrassSpace(this);
 		        added = true;
 		    }
+		    trialCount++;
 		}
 		return added;
 	}

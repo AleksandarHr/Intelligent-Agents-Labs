@@ -25,8 +25,13 @@ public class State {
 	private State previous;
 	private Plan runningPlan;
 
-	public State(Vehicle v, TaskSet tasks) {
-		// TODO
+	public State(Vehicle v, TaskSet initialTasks) {
+		this.vehicle = v;
+		this.currentLocation = v.getCurrentCity();
+		this.remainingTasks = initialTasks.clone();
+		this.runningTasks = TaskSet.noneOf(initialTasks); // ?? trying to create an empty TaskSet
+		this.runningPlan = new Plan(this.currentLocation);
+		this.remainingCapacity = vehicle.capacity();
 	}
 	
 	public State(City currentCity) {

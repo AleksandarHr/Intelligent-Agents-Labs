@@ -68,8 +68,8 @@ public class Deliberative implements DeliberativeBehavior {
 			break;
 		case BFS:
 			// TODO: Time how long the search takes
-			//State finalState = simpleBfs(initialState);
-			State finalState = BFS(initialState);
+			State finalState = simpleBfs(initialState);
+			//State finalState = BFS(initialState);
 			
 			plan = finalState.getPlan();
 			break;
@@ -136,7 +136,9 @@ public class Deliberative implements DeliberativeBehavior {
 				firstSolution = next;
 				break;
 			}
-			
+			if (next.getCurrentLocation().name.equals("Aarau")) {
+				System.out.println("Now");
+			}
 			// Check if we have already reached n with lesser cost
 			if (!stateIsRedundant(next, visited)) {
 				// n.printState();

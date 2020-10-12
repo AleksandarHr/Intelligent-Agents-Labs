@@ -14,24 +14,31 @@ import java.util.List;
 public class State {
 
 	private City currentLocation;
-	private TaskSet currentTasks;
+	private TaskSet runningTasks;
 	private TaskSet remainingTasks;
 	private int remainingCapacity;
 	private double currentCost;
 	public List<Action> pastActions;
 	private List<State> successorStates;
 	private Vehicle vehicle;
-	public Plan runningPlan;
+	// previous can be used for cycle detection
+	private State previous;
+	private Plan runningPlan;
 
+	public State(Vehicle v, TaskSet tasks) {
+		// TODO
+	}
+	
 	public State(City currentCity) {
 		this.currentLocation = currentCity;
-		this.currentTasks = null;
+		this.runningTasks = null;
 		this.remainingTasks = null;
 		this.pastActions = new ArrayList<Action>();
 		this.currentCost = 0.0;
 		this.remainingCapacity = 0;
 		this.successorStates = new ArrayList<State>();
 		this.runningPlan = new Plan(currentCity);
+		this.previous = null;
 	}
 
 	public State(Vehicle vehicle, TaskSet tasks, TaskSet carriedTasks) {
@@ -40,26 +47,17 @@ public class State {
 		// Tasks left to be picked up on the map
 		this.remainingTasks = tasks.clone();
 		// Current carried tasks by a vehicle
-		this.currentTasks = carriedTasks.clone();
+		this.runningTasks = carriedTasks.clone();
 		this.remainingCapacity = vehicle.capacity();
 		this.currentCost = 0;
-		this.pastActions = new ArrayList<>();
+		this.pastActions = new ArrayList<Action>();
+		this.previous = null;
 	}
 
-	public List<State> getSuccessorStates() {
-		return this.successorStates;
-	}
-
-	public double getCost() {
-		return this.currentCost;
-	}
-
-	public City getCurrentLocation() {
-		return this.currentLocation;
-	}
-
-	public void generateSuccessorStates() {
+	public List<State> generateSuccessorStates() {
 		List<State> successorStates = new ArrayList<State>();
+		
+		// Generate successor states after a move action
 		for (City neighbour : currentLocation.neighbors()) {
 			State next = duplicateState();
 			next.setCurrentLocation(neighbour);
@@ -69,7 +67,7 @@ public class State {
 		}
 
 		// Generate successor states after a pickup action
-		List<Task> currentCityPickupTasks = getRemainingTasksPickupCities();
+		List<Task> currentCityPickupTasks = getRemainingTasksInCurrentCity();
 		if (currentCityPickupTasks.size() != 0) {
 			for (Task t : currentCityPickupTasks) {
 				State next = duplicateState();
@@ -80,7 +78,7 @@ public class State {
 		}
 
 		// Generate successor states after a pickup action
-		List<Task> currentCityDeliveryTasks = getRemainingTasksDeliveryCities();
+		List<Task> currentCityDeliveryTasks = getRunningTasksForCurrentCity();
 		if (currentCityDeliveryTasks.size() != 0) {
 			for (Task t : currentCityDeliveryTasks) {
 				State next = duplicateState();
@@ -89,6 +87,8 @@ public class State {
 				successorStates.add(next);
 			}
 		}
+		
+		return successorStates;
 	}
 
 	public void increaseCost(double additionalCost) {
@@ -96,17 +96,17 @@ public class State {
 	}
 
 	public void pickupTask(Task t) {
-		this.currentTasks.add(t);
+		this.runningTasks.add(t);
 		this.remainingTasks.remove(t);
 		this.remainingCapacity -= t.weight;
 	}
 	
 	public void deliverTask(Task t) {
-		this.currentTasks.remove(t);
+		this.runningTasks.remove(t);
 		this.remainingCapacity += t.weight;
 	}
 
-	public List<Task> getRemainingTasksPickupCities() {
+	public List<Task> getRemainingTasksInCurrentCity() {
 		List<Task> currentCityTasks = new LinkedList<Task>();
 		for (Task t : this.remainingTasks) {
 			if (t.pickupCity.equals(this.currentLocation) && t.weight <= this.remainingCapacity) {
@@ -116,9 +116,9 @@ public class State {
 		return currentCityTasks;
 	}
 
-	public List<Task> getRemainingTasksDeliveryCities() {
+	public List<Task> getRunningTasksForCurrentCity() {
 		List<Task> currentCityTasks = new LinkedList<Task>();
-		for (Task t : this.remainingTasks) {
+		for (Task t : this.runningTasks) {
 			if (t.deliveryCity.equals(this.currentLocation)) {
 				currentCityTasks.add(t);
 			}
@@ -129,22 +129,22 @@ public class State {
 	public State duplicateState() {
 		State dupState = new State(this.currentLocation);
 		dupState.setCurrentCost(this.currentCost);
-		dupState.setCurrentTasks(this.currentTasks);
+		dupState.setCurrentTasks(this.runningTasks);
 		dupState.setPastActions(this.pastActions);
 		dupState.setRemainingCapacity(this.remainingCapacity);
 		dupState.setRemainingTasks(this.remainingTasks);
 		// dupState.setSuccessorStates(this.successorStates);
 		dupState.setVehicle(this.vehicle);
-
+		dupState.setPreviousState(this);
 		return dupState;
 	}
 
-	public boolean discovered(State other) {
-		List<Boolean> checks = new ArrayList<>();
+	public boolean discovered(State other) {	
+		List<Boolean> checks = new ArrayList<Boolean>();
 		// Is in the same city
 		checks.add(this.currentLocation.equals(other.currentLocation));
 		// Carrying the same tasks
-		checks.add(this.currentTasks.equals(other.currentTasks));
+		checks.add(this.runningTasks.equals(other.runningTasks));
 		// Having completed the same deliveries
 		checks.add(this.remainingTasks.equals(other.remainingTasks));
 		// Having equal or greater cost
@@ -158,12 +158,27 @@ public class State {
 		return true;
 	}
 
+	public boolean isStateFinal() {
+		return (this.remainingTasks.isEmpty() && this.runningTasks.isEmpty());
+	}
+	
+	public boolean hasCycle(State s) {
+		State prev = s.previous;
+		while (prev != null) {
+			if (prev.equals(s)) {
+				return true;
+			}
+		}
+		return false;
+	}
+	
+	// GETTERS & SETTERS
 	public void setCurrentLocation(City currentLocation) {
 		this.currentLocation = currentLocation;
 	}
 
 	public void setCurrentTasks(TaskSet currentTasks) {
-		this.currentTasks = currentTasks;
+		this.runningTasks = currentTasks;
 	}
 
 	public void setRemainingTasks(TaskSet remainingTasks) {
@@ -190,4 +205,27 @@ public class State {
 		this.vehicle = vehicle;
 	}
 
+	public List<State> getSuccessorStates() {
+		return this.successorStates;
+	}
+
+	public double getCost() {
+		return this.currentCost;
+	}
+
+	public City getCurrentLocation() {
+		return this.currentLocation;
+	}
+	
+	public State getPreviousState() {
+		return this.previous;
+	}
+
+	public State setPreviousState(State s) {
+		return this.previous = s;
+	}
+	
+	public Plan getPlan() {
+		return this.runningPlan;
+	}
 }

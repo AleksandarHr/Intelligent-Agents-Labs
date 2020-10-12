@@ -57,7 +57,9 @@ public class Deliberative implements DeliberativeBehavior {
 	@Override
 	public Plan plan(Vehicle vehicle, TaskSet tasks) {
 		Plan plan;
-
+		// TODO: we need to create a new state object here, so we need a constructor which takes Vehicle and TaskSet?
+		State initialState = new State(vehicle, tasks);
+		
 		// Compute the plan with the selected algorithm.
 		switch (algorithm) {
 		case ASTAR:
@@ -65,8 +67,11 @@ public class Deliberative implements DeliberativeBehavior {
 			plan = naivePlan(vehicle, tasks);
 			break;
 		case BFS:
-			// ...
-			plan = BFS(new State(vehicle.getCurrentCity())).runningPlan;
+			// TODO: Time how long the search takes
+			//State finalState = simpleBfs(initialState);
+			State finalState = BFS(initialState);
+			
+			plan = finalState.getPlan();
 			break;
 		default:
 			throw new AssertionError("Should not happen.");
@@ -107,8 +112,8 @@ public class Deliberative implements DeliberativeBehavior {
 		}
 	}
 
-	private boolean stateIsRedundant(State s, List<State> C) {
-		for (State c : C) {
+	private boolean stateIsRedundant(State s, List<State> visited) {
+		for (State c : visited) {
 			if (s.discovered(c)) {
 				return true;
 			}
@@ -116,27 +121,59 @@ public class Deliberative implements DeliberativeBehavior {
 		return false;
 	}
 
+	// Simple BFS - returns the first solution it finds, NOT the optimal - can use for testing?
+	private State simpleBfs(State initial) {
+		// BFS Search
+		State firstSolution = null;
+		
+		Queue<State> queue = new LinkedList<State>();
+		List<State> visited = new ArrayList<State>();
+		queue.add(initial);
+		
+		while (!queue.isEmpty()) {
+			State next = queue.poll();
+			if (next.isStateFinal()) {
+				firstSolution = next;
+				break;
+			}
+			
+			// Check if we have already reached n with lesser cost
+			if (!stateIsRedundant(next, visited)) {
+				// n.printState();
+				visited.add(next);
+				List<State> successors = next.generateSuccessorStates();
+				queue.addAll(successors);
+			}
+		}
+
+		return firstSolution;
+	}
+	
+	
+	// BFS - returns optimal solution found
 	private State BFS(State initial) {
-		List<State> finalStates = new ArrayList<>();
+		List<State> finalStates = new ArrayList<State>();
 
 		// BFS Search
-		Queue<State> Q = new LinkedList<>();
-		List<State> visited_states = new ArrayList<>();
-		Q.add(initial);
+		Queue<State> queue = new LinkedList<State>();
+		List<State> visited = new ArrayList<State>();
+		queue.add(initial);
 
-		while (!Q.isEmpty()) {
-			State n = Q.poll();
+		while (!queue.isEmpty()) {
+			State next = queue.poll();
 
 			// Check if we have already reached n with lesser cost
-			if (!stateIsRedundant(n, visited_states)) {
+			if (!stateIsRedundant(next, visited)) {
 				// n.printState();
-				visited_states.add(n);
-				n.generateSuccessorStates();
-
-				if (n.getSuccessorStates().isEmpty())
-					finalStates.add(n);
-				else
-					Q.addAll(n.getSuccessorStates());
+				visited.add(next);
+				
+				if (next.isStateFinal()) {
+					finalStates.add(next);
+				} 
+				else {
+					List<State> successors = next.generateSuccessorStates();
+					queue.addAll(successors);
+				}
 			}
 		}
 
@@ -156,8 +193,8 @@ public class Deliberative implements DeliberativeBehavior {
 	public State ASTAR(State initial) {
 		Plan plan = new Plan(initial.getCurrentLocation());
 
-		List<State> Q = new LinkedList<>();
-		List<State> C = new ArrayList<>();
+		List<State> Q = new LinkedList<State>();
+		List<State> C = new ArrayList<State>();
 		State n = null;
 		return n;
 	}

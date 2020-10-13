@@ -1,5 +1,9 @@
 package template;
 
+import logist.plan.Action;
+import logist.plan.Action.Move;
+import logist.plan.Action.Pickup;
+import logist.plan.Action.Delivery;
 import logist.plan.Plan;
 import logist.simulation.Vehicle;
 import logist.task.Task;
@@ -32,6 +36,7 @@ public class State {
 		this.runningTasks = TaskSet.noneOf(initialTasks); // ?? trying to create an empty TaskSet
 		this.runningPlan = new Plan(this.currentLocation);
 		this.remainingCapacity = vehicle.capacity();
+		this.pastActions = new ArrayList<Action>();
 	}
 	
 	public State () {
@@ -71,7 +76,8 @@ public class State {
 			State next = duplicateState();
 			next.setCurrentLocation(neighbour);
 			next.increaseCost(this.vehicle.costPerKm() * currentLocation.distanceTo(neighbour));
-			next.runningPlan.appendMove(neighbour);
+//			next.runningPlan.appendMove(neighbour);
+			next.pastActions.add(new Move(neighbour));
 			successorStates.add(next);
 		}
 
@@ -81,7 +87,8 @@ public class State {
 			for (Task t : currentCityPickupTasks) {
 				State next = duplicateState();
 				next.pickupTask(t);
-				next.runningPlan.appendPickup(t);
+				//next.runningPlan.appendPickup(t);
+				next.pastActions.add(new Pickup(t));
 				successorStates.add(next);
 			}
 		}		
@@ -92,11 +99,11 @@ public class State {
 			for (Task t : currentCityDeliveryTasks) {
 				State next = duplicateState();
 				next.deliverTask(t);
-				next.runningPlan.appendDelivery(t);
+				//next.runningPlan.appendDelivery(t);
+				next.pastActions.add(new Delivery(t));
 				successorStates.add(next);
 			}
 		}
-		
 		return successorStates;
 	}
 
@@ -140,7 +147,7 @@ public class State {
 		dupState.setCurrentLocation(this.currentLocation);
 		dupState.setCurrentCost(this.currentCost);
 		dupState.setCurrentTasks(this.runningTasks.clone());
-		dupState.setPastActions(this.pastActions);
+		dupState.setPastActions(new ArrayList<Action>(this.pastActions));
 		dupState.setRemainingCapacity(this.remainingCapacity);
 		dupState.setRemainingTasks(this.remainingTasks.clone());
 		dupState.setVehicle(this.vehicle);
@@ -236,6 +243,9 @@ public class State {
 	}
 	
 	public Plan getPlan() {
+		for (Action a : this.pastActions) {
+			this.runningPlan.append(a);
+		}
 		return this.runningPlan;
 	}
 

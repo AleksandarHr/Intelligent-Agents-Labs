@@ -68,7 +68,7 @@ public class Deliberative implements DeliberativeBehavior {
 			break;
 		case BFS:
 			// TODO: Time how long the search takes
-			State finalState = simpleBfs(initialState);
+			State finalState = BFS(initialState);
 			//State finalState = BFS(initialState);
 			
 			plan = finalState.getPlan();

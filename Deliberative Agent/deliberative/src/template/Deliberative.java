@@ -136,9 +136,7 @@ public class Deliberative implements DeliberativeBehavior {
 				firstSolution = next;
 				break;
 			}
-			if (next.getCurrentLocation().name.equals("Aarau")) {
-				System.out.println("Now");
-			}
+			
 			// Check if we have already reached n with lesser cost
 			if (!stateIsRedundant(next, visited)) {
 				// n.printState();

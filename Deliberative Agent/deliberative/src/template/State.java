@@ -34,6 +34,10 @@ public class State {
 		this.remainingCapacity = vehicle.capacity();
 	}
 	
+	public State () {
+		
+	}
+	
 	public State(City currentCity) {
 		this.currentLocation = currentCity;
 		this.runningTasks = null;
@@ -80,9 +84,9 @@ public class State {
 				next.runningPlan.appendPickup(t);
 				successorStates.add(next);
 			}
-		}
+		}		
 
-		// Generate successor states after a pickup action
+		// Generate successor states after a delivery action
 		List<Task> currentCityDeliveryTasks = getRunningTasksForCurrentCity();
 		if (currentCityDeliveryTasks.size() != 0) {
 			for (Task t : currentCityDeliveryTasks) {
@@ -132,15 +136,16 @@ public class State {
 	}
 
 	public State duplicateState() {
-		State dupState = new State(this.currentLocation);
+		State dupState = new State();
+		dupState.setCurrentLocation(this.currentLocation);
 		dupState.setCurrentCost(this.currentCost);
-		dupState.setCurrentTasks(this.runningTasks);
+		dupState.setCurrentTasks(this.runningTasks.clone());
 		dupState.setPastActions(this.pastActions);
 		dupState.setRemainingCapacity(this.remainingCapacity);
-		dupState.setRemainingTasks(this.remainingTasks);
-		// dupState.setSuccessorStates(this.successorStates);
+		dupState.setRemainingTasks(this.remainingTasks.clone());
 		dupState.setVehicle(this.vehicle);
 		dupState.setPreviousState(this);
+		dupState.setPlan(this.runningPlan);
 		return dupState;
 	}
 
@@ -232,5 +237,9 @@ public class State {
 	
 	public Plan getPlan() {
 		return this.runningPlan;
+	}
+
+	public void setPlan(Plan p) {
+		this.runningPlan = p;
 	}
 }

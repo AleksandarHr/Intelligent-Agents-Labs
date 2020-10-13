@@ -7,6 +7,7 @@ import java.util.ArrayList;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Queue;
+import java.util.concurrent.TimeUnit;
 
 import logist.agent.Agent;
 import logist.behavior.DeliberativeBehavior;
@@ -68,8 +69,13 @@ public class Deliberative implements DeliberativeBehavior {
 			break;
 		case BFS:
 			// TODO: Time how long the search takes
+			System.out.println("Planning start.\n");
+			long startTime = System.nanoTime();
+			//State finalState = simpleBfs(initialState);
 			State finalState = BFS(initialState);
-			//State finalState = BFS(initialState);
+			long endTime = System.nanoTime();
+			long duration = TimeUnit.SECONDS.convert((endTime - startTime), TimeUnit.NANOSECONDS);
+			System.out.println("Planning end after " + duration + " seconds.\n");
 			
 			plan = finalState.getPlan();
 			break;
@@ -112,14 +118,6 @@ public class Deliberative implements DeliberativeBehavior {
 		}
 	}
 
-	private boolean stateIsRedundant(State s, List<State> visited) {
-		for (State c : visited) {
-			if (s.discovered(c)) {
-				return true;
-			}
-		}
-		return false;
-	}
 
 	// Simple BFS - returns the first solution it finds, NOT the optimal - can use for testing?
 	private State simpleBfs(State initial) {
@@ -138,7 +136,7 @@ public class Deliberative implements DeliberativeBehavior {
 			}
 			
 			// Check if we have already reached n with lesser cost
-			if (!stateIsRedundant(next, visited)) {
+			if (!next.isStateRedundant(visited)) {
 				// n.printState();
 				visited.add(next);
 				List<State> successors = next.generateSuccessorStates();
@@ -163,7 +161,7 @@ public class Deliberative implements DeliberativeBehavior {
 			State next = queue.poll();
 
 			// Check if we have already reached n with lesser cost
-			if (!stateIsRedundant(next, visited)) {
+			if (!next.isStateRedundant(visited)) {
 				// n.printState();
 				visited.add(next);
 				
@@ -177,6 +175,7 @@ public class Deliberative implements DeliberativeBehavior {
 			}
 		}
 
+		System.out.println("BFS found " + finalStates.size() + " leaf states.\n");
 		State optimalState = finalStates.get(0);
 		double optimalCost = finalStates.get(0).getCost();
 

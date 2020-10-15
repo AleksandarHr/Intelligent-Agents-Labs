@@ -129,6 +129,7 @@ public class Deliberative implements DeliberativeBehavior {
 		queue.add(initial);
 		
 		while (!queue.isEmpty()) {
+			System.out.println("Queue length = " + queue.size());
 			State next = queue.poll();
 			if (next.isStateFinal()) {
 				firstSolution = next;
@@ -151,42 +152,44 @@ public class Deliberative implements DeliberativeBehavior {
 	// BFS - returns optimal solution found
 	private State BFS(State initial) {
 		List<State> finalStates = new ArrayList<State>();
-
+		State bestFinalState = null;
 		// BFS Search
 		Queue<State> queue = new LinkedList<State>();
 		List<State> visited = new ArrayList<State>();
 		queue.add(initial);
 
 		while (!queue.isEmpty()) {
+			System.out.println("QUEUE LENGTH = " + queue.size());
 			State next = queue.poll();
 
 			// Check if we have already reached n with lesser cost
 			if (!next.isStateRedundant(visited)) {
 				// n.printState();
 				visited.add(next);
-				
-				if (next.isStateFinal()) {
-					finalStates.add(next);
-				} 
-				else {
-					List<State> successors = next.generateSuccessorStates();
-					queue.addAll(successors);
+				if (bestFinalState == null || bestFinalState.getCost() > next.getCost()) {
+					if (next.isStateFinal()) {
+						bestFinalState = next;
+					} 
+					else {
+						List<State> successors = next.generateSuccessorStates();
+						queue.addAll(successors);
+					}
 				}
 			}
 		}
 
-		System.out.println("BFS found " + finalStates.size() + " leaf states.\n");
-		State optimalState = finalStates.get(0);
-		double optimalCost = finalStates.get(0).getCost();
+//		System.out.println("BFS found " + finalStates.size() + " leaf states.\n");
+//		State optimalState = finalStates.get(0);
+//		double optimalCost = finalStates.get(0).getCost();
+//
+//		for (State s : finalStates) {
+//			if (s.getCost() < optimalCost) {
+//				optimalCost = s.getCost();
+//				optimalState = s;
+//			}
+//		}
 
-		for (State s : finalStates) {
-			if (s.getCost() < optimalCost) {
-				optimalCost = s.getCost();
-				optimalState = s;
-			}
-		}
-
-		return optimalState;
+		return bestFinalState;
 	}
 
 	public State ASTAR(State initial) {

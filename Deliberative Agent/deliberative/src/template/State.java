@@ -12,8 +12,10 @@ import logist.topology.Topology.City;
 
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.HashSet;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.Set;
 
 public class State {
 
@@ -52,44 +54,101 @@ public class State {
 		this.previous = previous;
 	}
 	
+//	public List<State> generateSuccessorStatesOld() {
+//		List<State> successorStates = new ArrayList<State>();
+//		
+//		// Generate successor states after a move action
+//		for (City neighbour : currentLocation.neighbors()) {
+//			State next = duplicateState();
+//			next.setCurrentLocation(neighbour);
+//			next.increaseCost(this.vehicle.costPerKm() * currentLocation.distanceTo(neighbour));
+//			if (!next.hasCycle()) {
+//				next.pastActions.add(new Move(neighbour));
+//				successorStates.add(next);
+//			}
+//		}
+//
+//		// Generate successor states after a pickup action
+//		List<Task> currentCityPickupTasks = getRemainingTasksInCurrentCity();
+//		for (Task t : currentCityPickupTasks) {
+//			State next = duplicateState();
+//			next.pickupTask(t);
+//			if (!next.hasCycle()) {
+//				next.pastActions.add(new Pickup(t));
+//				successorStates.add(next);		
+//			}
+//		}
+//
+//		// Generate successor states after a delivery action
+//		List<Task> currentCityDeliveryTasks = getRunningTasksForCurrentCity();
+//		for (Task t : currentCityDeliveryTasks) {
+//			State next = duplicateState();
+//			next.deliverTask(t);
+//			if (!next.hasCycle()) {
+//				next.pastActions.add(new Delivery(t));
+//				successorStates.add(next);
+//			}
+//		}
+//		return successorStates;
+//	}
+
 	public List<State> generateSuccessorStates() {
 		List<State> successorStates = new ArrayList<State>();
+		Set<City> citiesOfInterest = new HashSet<City>();
 		
-		// Generate successor states after a move action
-		for (City neighbour : currentLocation.neighbors()) {
-			State next = duplicateState();
-			next.setCurrentLocation(neighbour);
-			next.increaseCost(this.vehicle.costPerKm() * currentLocation.distanceTo(neighbour));
-			if (!next.hasCycle()) {
-				next.pastActions.add(new Move(neighbour));
-				successorStates.add(next);
-			}
-		}
-
-		// Generate successor states after a pickup action
+		// For all tasks remaining to be picked up
 		List<Task> currentCityPickupTasks = getRemainingTasksInCurrentCity();
-		for (Task t : currentCityPickupTasks) {
-			State next = duplicateState();
-			next.pickupTask(t);
-			if (!next.hasCycle()) {
-				next.pastActions.add(new Pickup(t));
-				successorStates.add(next);		
+		for (Task t : this.remainingTasks) {
+			// If the task is in current city, pick it up
+			if (currentCityPickupTasks.contains(t)) {
+				State next = duplicateState();
+				next.pickupTask(t);
+				if (!next.hasCycle()) {
+					next.pastActions.add(new Pickup(t));
+					successorStates.add(next);		
+				}
+			} else {
+				// if not, add the neigbhour city on the path to its pickup city (e.g. the first one)
+				//		to the set of interesting cities
+				List<City> path = this.currentLocation.pathTo(t.pickupCity);
+				citiesOfInterest.add(path.get(0));
 			}
 		}
 
 		// Generate successor states after a delivery action
 		List<Task> currentCityDeliveryTasks = getRunningTasksForCurrentCity();
-		for (Task t : currentCityDeliveryTasks) {
-			State next = duplicateState();
-			next.deliverTask(t);
-			if (!next.hasCycle()) {
-				next.pastActions.add(new Delivery(t));
-				successorStates.add(next);
+		for (Task t : this.runningTasks) {
+			// If the task is to be delivered in the current city, deliver it
+			if (currentCityDeliveryTasks.contains(t)) {
+				State next = duplicateState();
+				next.deliverTask(t);
+				if (!next.hasCycle()) {
+					next.pastActions.add(new Delivery(t));
+					successorStates.add(next);
+				}
+			} else {
+				// if not, add the neigbhour city on the path to its delivery city (e.g. the first one)
+				//		to the set of interesting cities
+				List<City> path = this.currentLocation.pathTo(t.deliveryCity);
+				citiesOfInterest.add(path.get(0));
 			}
 		}
+		
+		for (City c : citiesOfInterest) {
+			if (currentLocation.neighbors().contains(c)) {
+				State next = duplicateState();
+				next.setCurrentLocation(c);
+				next.increaseCost(this.vehicle.costPerKm() * currentLocation.distanceTo(c));
+				if (!next.hasCycle()) {
+					next.pastActions.add(new Move(c));
+					successorStates.add(next);
+				}
+			}
+		}
+		
 		return successorStates;
 	}
-
+	
 	public void increaseCost(double additionalCost) {
 		this.currentCost += additionalCost;
 	}

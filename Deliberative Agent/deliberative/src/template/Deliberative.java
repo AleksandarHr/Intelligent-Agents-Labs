@@ -4,8 +4,10 @@ package template;
 import logist.simulation.Vehicle;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.PriorityQueue;
 import java.util.Queue;
 import java.util.concurrent.TimeUnit;
 
@@ -193,11 +195,32 @@ public class Deliberative implements DeliberativeBehavior {
 	}
 
 	public State ASTAR(State initial) {
-		Plan plan = new Plan(initial.getCurrentLocation());
-
-		List<State> Q = new LinkedList<State>();
-		List<State> C = new ArrayList<State>();
+		StateComparator compare = new StateComparator();
+		PriorityQueue<State> Q = new PriorityQueue<State>(100000, compare);
+		//List<State> Q = new LinkedList<State>();
+		List<State> visited = new ArrayList<State>();
 		State n = null;
+        
+		Q.add(initial);
+        
+        while (!Q.isEmpty()) {
+        	n = Q.poll();
+        	
+        	if (n.isStateFinal()) {
+        		return n;
+        	}
+        	
+        	
+        	if (n.isStateRedundantOrLowerCost(visited)) {
+        		// add n to C
+        		visited.add(n);
+        		// add successors of n
+        		n.generateSuccessorStates();
+        		Q.addAll(n.getSuccessorStates());
+        	}
+
+        }
+        
 		return n;
 	}
 

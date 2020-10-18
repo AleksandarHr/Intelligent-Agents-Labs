@@ -119,39 +119,11 @@ public class Deliberative implements DeliberativeBehavior {
 			// plan is computed.
 		}
 	}
-
-
-	// Simple BFS - returns the first solution it finds, NOT the optimal - can use for testing?
-	private State simpleBfs(State initial) {
-		// BFS Search
-		State firstSolution = null;
-		
-		Queue<State> queue = new LinkedList<State>();
-		List<State> visited = new ArrayList<State>();
-		queue.add(initial);
-		
-		while (!queue.isEmpty()) {
-			System.out.println("Queue length = " + queue.size());
-			State next = queue.poll();
-			if (next.isStateFinal()) {
-				firstSolution = next;
-				break;
-			}
-			
-			// Check if we have already reached n with lesser cost
-			if (!next.isStateRedundant(visited)) {
-				// n.printState();
-				visited.add(next);
-				List<State> successors = next.generateSuccessorStates();
-				queue.addAll(successors);
-			}
-		}
-
-		return firstSolution;
-	}
 	
-	
-	// BFS - returns optimal solution found
+	/*
+	 * BFS performs a Breadth-First-Search starting from a given initial state
+	 * and returns the optimal final state, pruning some sub-optimal paths along the way
+	 */
 	private State BFS(State initial) {
 		List<State> finalStates = new ArrayList<State>();
 		State bestFinalState = null;
@@ -161,35 +133,26 @@ public class Deliberative implements DeliberativeBehavior {
 		queue.add(initial);
 
 		while (!queue.isEmpty()) {
-			System.out.println("QUEUE LENGTH = " + queue.size());
 			State next = queue.poll();
 
 			// Check if we have already reached n with lesser cost
 			if (!next.isStateRedundant(visited)) {
-				// n.printState();
 				visited.add(next);
+				// Continue exploring next state only if we have not reached any final state yet
+				// or if the best final state so far is more expensive than the next state
 				if (bestFinalState == null || bestFinalState.getCost() > next.getCost()) {
 					if (next.isStateFinal()) {
+						// If next is a final state, it must be more optimal than the best-so-far
 						bestFinalState = next;
 					} 
 					else {
+						// If next is not a final state, generate its successor states and add them to the queue
 						List<State> successors = next.generateSuccessorStates();
 						queue.addAll(successors);
 					}
 				}
 			}
 		}
-
-//		System.out.println("BFS found " + finalStates.size() + " leaf states.\n");
-//		State optimalState = finalStates.get(0);
-//		double optimalCost = finalStates.get(0).getCost();
-//
-//		for (State s : finalStates) {
-//			if (s.getCost() < optimalCost) {
-//				optimalCost = s.getCost();
-//				optimalState = s;
-//			}
-//		}
 
 		return bestFinalState;
 	}
@@ -224,4 +187,36 @@ public class Deliberative implements DeliberativeBehavior {
 		return n;
 	}
 
+
+	/*
+	 *  Simple BFS - returns the first solution it finds, NOT the optimal
+	 *	Used for testing
+	 */
+	private State simpleBfs(State initial) {
+		// BFS Search
+		State firstSolution = null;
+		
+		Queue<State> queue = new LinkedList<State>();
+		List<State> visited = new ArrayList<State>();
+		queue.add(initial);
+		
+		while (!queue.isEmpty()) {
+			System.out.println("Queue length = " + queue.size());
+			State next = queue.poll();
+			if (next.isStateFinal()) {
+				firstSolution = next;
+				break;
+			}
+			
+			// Check if we have already reached n with lesser cost
+			if (!next.isStateRedundant(visited)) {
+				// n.printState();
+				visited.add(next);
+				List<State> successors = next.generateSuccessorStates();
+				queue.addAll(successors);
+			}
+		}
+
+		return firstSolution;
+	}
 }

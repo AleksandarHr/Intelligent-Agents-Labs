@@ -53,45 +53,10 @@ public class State {
 		this.vehicle = v;
 		this.previous = previous;
 	}
-	
-//	public List<State> generateSuccessorStatesOld() {
-//		List<State> successorStates = new ArrayList<State>();
-//		
-//		// Generate successor states after a move action
-//		for (City neighbour : currentLocation.neighbors()) {
-//			State next = duplicateState();
-//			next.setCurrentLocation(neighbour);
-//			next.increaseCost(this.vehicle.costPerKm() * currentLocation.distanceTo(neighbour));
-//			if (!next.hasCycle()) {
-//				next.pastActions.add(new Move(neighbour));
-//				successorStates.add(next);
-//			}
-//		}
-//
-//		// Generate successor states after a pickup action
-//		List<Task> currentCityPickupTasks = getRemainingTasksInCurrentCity();
-//		for (Task t : currentCityPickupTasks) {
-//			State next = duplicateState();
-//			next.pickupTask(t);
-//			if (!next.hasCycle()) {
-//				next.pastActions.add(new Pickup(t));
-//				successorStates.add(next);		
-//			}
-//		}
-//
-//		// Generate successor states after a delivery action
-//		List<Task> currentCityDeliveryTasks = getRunningTasksForCurrentCity();
-//		for (Task t : currentCityDeliveryTasks) {
-//			State next = duplicateState();
-//			next.deliverTask(t);
-//			if (!next.hasCycle()) {
-//				next.pastActions.add(new Delivery(t));
-//				successorStates.add(next);
-//			}
-//		}
-//		return successorStates;
-//	}
 
+	/*
+	 * Generates all successor states of the current one
+	 */
 	public List<State> generateSuccessorStates() {
 		List<State> successorStates = new ArrayList<State>();
 		Set<City> citiesOfInterest = new HashSet<City>();
@@ -134,6 +99,7 @@ public class State {
 			}
 		}
 		
+		// Perform a move action to each of the cities of interest and create a successor state
 		for (City c : citiesOfInterest) {
 			if (currentLocation.neighbors().contains(c)) {
 				State next = duplicateState();
@@ -153,17 +119,29 @@ public class State {
 		this.currentCost += additionalCost;
 	}
 
+	/*
+	 * Given a task t, removes it from the agent's remaining tasks, adds it
+	 * to the agent's running tasks and decreases the agent's remaining capacity
+	 */
 	public void pickupTask(Task t) {
 		this.runningTasks.add(t);
 		this.remainingTasks.remove(t);
 		this.remainingCapacity -= t.weight;
 	}
 	
+	/*
+	 * Given a task t, removes it from the agent's running tasks and increases
+	 * the agent's remaining capacity
+	 */
 	public void deliverTask(Task t) {
 		this.runningTasks.remove(t);
 		this.remainingCapacity += t.weight;
 	}
 
+	/*
+	 * Returns a list of tasks which the agent has not yet picked up and which have
+	 * the same pickup city as the agent's current location
+	 */
 	public List<Task> getRemainingTasksInCurrentCity() {
 		List<Task> currentCityTasks = new LinkedList<Task>();
 		for (Task t : this.remainingTasks) {
@@ -174,6 +152,10 @@ public class State {
 		return currentCityTasks;
 	}
 
+	/*
+	 * Returns a list of tasks which the agent has already picked up but has not delivered
+	 *  and which have the same delivery city as the agent's current location
+	 */
 	public List<Task> getRunningTasksForCurrentCity() {
 		List<Task> currentCityTasks = new LinkedList<Task>();
 		for (Task t : this.runningTasks) {
@@ -184,12 +166,18 @@ public class State {
 		return currentCityTasks;
 	}
 
+	/*
+	 * Returns a State object which is a duplicate of the current State object
+	 */
 	private State duplicateState() {
 		State dupState = new State(this.currentLocation, this.currentCost, this.runningTasks.clone(),
 				this.remainingTasks.clone(), this.pastActions, this.remainingCapacity, this.vehicle, this);
 		return dupState;
 	}
 
+	/*
+	 * Given a listed of already visited states, checks if the current state has been discovered
+	 */
 	public boolean isStateRedundant(List<State> visited) {
 		for (State c : visited) {
 			if (this.discovered(c)) {
@@ -199,6 +187,9 @@ public class State {
 		return false;
 	}
 	
+	/*
+	 * Returns true if the current state has been previously reached with a lower cost
+	 */
 	private boolean discovered(State other) {	
 		List<Boolean> checks = new ArrayList<Boolean>();
 		// Is in the same city
@@ -218,10 +209,17 @@ public class State {
 		return true;
 	}
 
+	/*
+	 * Returns true if both remainigTasks and runningTasks sets are empty
+	 */
 	public boolean isStateFinal() {
 		return (this.remainingTasks.isEmpty() && this.runningTasks.isEmpty());
 	}
 	
+	/*
+	 * Traverses all previous states, starting from the curernt one, and checks
+	 * for cycles along the path.
+	 */
 	public boolean hasCycle() {
 		State prev = this.previous;
 		while (prev != null) {
@@ -286,6 +284,9 @@ public class State {
 		return this.previous = s;
 	}
 	
+	/*
+	 * Build a plan based on the current state's past actions and return it
+	 */
 	public Plan getPlan() {
 		Plan p = new Plan(this.startingLocation);
 		for (Action a : this.pastActions) {

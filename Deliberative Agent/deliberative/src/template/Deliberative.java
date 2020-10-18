@@ -60,8 +60,12 @@ public class Deliberative implements DeliberativeBehavior {
 	@Override
 	public Plan plan(Vehicle vehicle, TaskSet tasks) {
 		Plan plan;
-		// TODO: we need to create a new state object here, so we need a constructor which takes Vehicle and TaskSet?
 		State initialState = new State(vehicle, tasks);
+		// Agent's plan got interrupted and is recomputing a new plan
+		if (vehicle.getCurrentTasks() != null && vehicle.getCurrentTasks().size() != 0) {
+			// Add the tasks the agent has currently picked up to the new plan
+			initialState.setRunningTasks(vehicle.getCurrentTasks());
+		}
 		
 		// Compute the plan with the selected algorithm.
 		switch (algorithm) {

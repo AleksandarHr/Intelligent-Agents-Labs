@@ -236,7 +236,7 @@ public class State {
 		this.currentLocation = currentLocation;
 	}
 
-	public void setCurrentTasks(TaskSet currentTasks) {
+	public void setRunningTasks(TaskSet currentTasks) {
 		this.runningTasks = currentTasks;
 	}
 

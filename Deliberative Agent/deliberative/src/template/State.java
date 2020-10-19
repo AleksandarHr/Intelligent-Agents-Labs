@@ -12,6 +12,7 @@ import logist.topology.Topology.City;
 
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.HashSet;
 import java.util.LinkedList;
 import java.util.List;
@@ -25,39 +26,42 @@ public class State {
 	private TaskSet remainingTasks;
 	private int remainingCapacity;
 	private double currentCost;
-	public List<Action> pastActions;
+	public List<Tuple> pastActions;
 	private List<State> successorStates;
 	private Vehicle vehicle;
 	// previous can be used for cycle detection
 	private State previous;
+	private double heuristics;
 
 	public State(Vehicle v, TaskSet initialTasks) {
 		this.startingLocation = v.getCurrentCity();
 		this.vehicle = v;
 		this.currentLocation = v.getCurrentCity();
 		this.remainingTasks = initialTasks.clone();
-		this.runningTasks = TaskSet.noneOf(initialTasks); // ?? trying to create an empty TaskSet
+		this.runningTasks = TaskSet.noneOf(initialTasks); //create an empty TaskSet
 		this.remainingCapacity = vehicle.capacity();
-		this.pastActions = new ArrayList<Action>();
+		this.pastActions = new ArrayList<Tuple>();
 		this.previous = null;
+		this.heuristics = this.computeHeuristics();
 	}
 	
-	public State (City city, double cost, TaskSet running, TaskSet remaining, List<Action> actions, 
+	public State (City city, double cost, TaskSet running, TaskSet remaining, List<Tuple> actions, 
 			int remainingCapacity, Vehicle v, State previous) {
 		this.currentLocation = city;
 		this.currentCost = cost;
 		this.runningTasks = running;
 		this.remainingTasks = remaining;
-		this.pastActions = new ArrayList<Action>(actions);
+		this.pastActions = new ArrayList<Tuple>(actions);
 		this.remainingCapacity = remainingCapacity;
 		this.vehicle = v;
 		this.previous = previous;
+		this.heuristics = this.computeHeuristics();
 	}
 
 	/*
 	 * Generates all successor states of the current one
 	 */
-	public List<State> generateSuccessorStates() {
+	public List<State> generateSuccessorStatesOld() {
 		List<State> successorStates = new ArrayList<State>();
 		Set<City> citiesOfInterest = new HashSet<City>();
 		
@@ -69,7 +73,7 @@ public class State {
 				State next = duplicateState();
 				next.pickupTask(t);
 				if (!next.hasCycle()) {
-					next.pastActions.add(new Pickup(t));
+					//next.pastActions.add(new Pickup(t));
 					successorStates.add(next);		
 				}
 			} else {
@@ -88,7 +92,7 @@ public class State {
 				State next = duplicateState();
 				next.deliverTask(t);
 				if (!next.hasCycle()) {
-					next.pastActions.add(new Delivery(t));
+					//next.pastActions.add(new Delivery(t));
 					successorStates.add(next);
 				}
 			} else {
@@ -106,7 +110,7 @@ public class State {
 				next.setCurrentLocation(c);
 				next.increaseCost(this.vehicle.costPerKm() * currentLocation.distanceTo(c));
 				if (!next.hasCycle()) {
-					next.pastActions.add(new Move(c));
+					//next.pastActions.add(new Move(c));
 					successorStates.add(next);
 				}
 			}
@@ -114,6 +118,37 @@ public class State {
 		
 		return successorStates;
 	}
+	
+	public List<State> generateSuccessorStates() {
+		List<State> successorStates = new ArrayList<State>();
+
+		for (Task task : this.remainingTasks) {
+			State n = duplicateState();
+			n.pastActions.add(new Tuple(Tuple.Type.PICKUP, task));
+			n.pickupTask(task);
+			n.currentLocation = task.pickupCity;
+			n.increaseCost(this.currentLocation.distanceTo(n.currentLocation) * this.vehicle.costPerKm());
+			if (task.pickupCity.equals(currentLocation)) {
+				return Arrays.asList(n);
+			}
+			successorStates.add(n);
+		}
+		for (Task task : this.runningTasks) {
+			State n = duplicateState();
+			n.pastActions.add(new Tuple(Tuple.Type.DELIVER, task));
+			n.deliverTask(task);
+			n.currentLocation = task.deliveryCity;
+			n.increaseCost(this.currentLocation.distanceTo(n.currentLocation) * this.vehicle.costPerKm());
+			if (task.deliveryCity.equals(currentLocation)) {
+				return Arrays.asList(n);
+			}
+			successorStates.add(n);
+		}
+
+
+		return successorStates;
+	}
+
 	
 	public void increaseCost(double additionalCost) {
 		this.currentCost += additionalCost;
@@ -188,25 +223,52 @@ public class State {
 	}
 	
 	/*
-	 * Returns true if the current state has been previously reached with a lower cost
+	 * Given a listed of already visited states, checks if the current state has been discovered
+	 * or if it has a discovered taste with lower heursitics cost
 	 */
-	private boolean discovered(State other) {	
-		List<Boolean> checks = new ArrayList<Boolean>();
-		// Is in the same city
-		checks.add(this.currentLocation.equals(other.currentLocation));
-		// Carrying the same tasks
-		checks.add(this.runningTasks.equals(other.runningTasks));
-		// Having completed the same deliveries
-		checks.add(this.remainingTasks.equals(other.remainingTasks));
-		// Having equal or greater cost
-		checks.add(this.currentCost >= other.currentCost);
-
-		for (Boolean check : checks) {
-			if (!check) {
+	
+	public boolean isStateRedundantOrLowerCost(List<State> visited) {
+		for (State c : visited) {
+			if (this.discovered(c)) {
+				if (this.heuristics < c.getHeuristics()) {
+					return true;
+				}
 				return false;
 			}
 		}
 		return true;
+
+	}
+	
+	public double getHeuristics() {
+		return heuristics;
+	}
+
+	public Double computeHeuristics() {
+		List<Double> list = new LinkedList<Double>();
+		for (Task task : this.remainingTasks) {
+			list.add(this.currentLocation.distanceTo(task.pickupCity) + task.pickupCity.distanceTo(task.deliveryCity));
+		}
+
+		for (Task task : this.runningTasks) {
+			list.add(this.currentLocation.distanceTo(task.deliveryCity));
+		}
+		if (list.isEmpty()) {
+			return 0.0;
+		}
+		return Collections.max(list) + this.currentCost;
+	}
+	
+	/*
+	 * Returns true if the current state has been previously reached with a lower cost
+	 */
+	private boolean discovered(State other) {
+		if(!this.currentLocation.equals(other.currentLocation) || !this.remainingTasks.equals(other.remainingTasks) ||
+				!this.runningTasks.equals(other.runningTasks) || !(this.currentCost >= other.currentCost)) {
+			return false;
+		} else {
+			return true;
+		}
 	}
 
 	/*
@@ -252,7 +314,7 @@ public class State {
 		this.currentCost = currentCost;
 	}
 
-	public void setPastActions(List<Action> pastActions) {
+	public void setPastActions(List<Tuple> pastActions) {
 		this.pastActions = pastActions;
 	}
 
@@ -284,16 +346,7 @@ public class State {
 		return this.previous = s;
 	}
 	
-	/*
-	 * Build a plan based on the current state's past actions and return it
-	 */
-	public Plan getPlan() {
-		Plan p = new Plan(this.startingLocation);
-		for (Action a : this.pastActions) {
-			p.append(a);
-		}
-		return p;
-	}
+
 	
 	
 	@Override

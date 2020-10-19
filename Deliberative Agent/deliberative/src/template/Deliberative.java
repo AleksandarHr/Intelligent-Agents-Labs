@@ -66,24 +66,30 @@ public class Deliberative implements DeliberativeBehavior {
 			// Add the tasks the agent has currently picked up to the new plan
 			initialState.setRunningTasks(vehicle.getCurrentTasks());
 		}
-		
+
 		// Compute the plan with the selected algorithm.
 		switch (algorithm) {
 		case ASTAR:
 			// ...
-			plan = naivePlan(vehicle, tasks);
+			System.out.println("Planning start.\n");
+			long startTime_star = System.nanoTime();
+			State finalState_star = ASTAR(initialState);
+			long endTime_star = System.nanoTime();
+			long duration_star = TimeUnit.SECONDS.convert((endTime_star - startTime_star), TimeUnit.NANOSECONDS);
+			System.out.println("Planning end after " + duration_star + " seconds.\n");
+
+			plan = getPlan(finalState_star, vehicle);
 			break;
 		case BFS:
 			// TODO: Time how long the search takes
 			System.out.println("Planning start.\n");
 			long startTime = System.nanoTime();
-			//State finalState = simpleBfs(initialState);
 			State finalState = BFS(initialState);
 			long endTime = System.nanoTime();
 			long duration = TimeUnit.SECONDS.convert((endTime - startTime), TimeUnit.NANOSECONDS);
 			System.out.println("Planning end after " + duration + " seconds.\n");
-			
-			plan = finalState.getPlan();
+
+			plan = getPlan(finalState, vehicle);
 			break;
 		default:
 			throw new AssertionError("Should not happen.");
@@ -123,10 +129,10 @@ public class Deliberative implements DeliberativeBehavior {
 			// plan is computed.
 		}
 	}
-	
+
 	/*
-	 * BFS performs a Breadth-First-Search starting from a given initial state
-	 * and returns the optimal final state, pruning some sub-optimal paths along the way
+	 * BFS performs a Breadth-First-Search starting from a given initial state and
+	 * returns the optimal final state, pruning some sub-optimal paths along the way
 	 */
 	private State BFS(State initial) {
 		List<State> finalStates = new ArrayList<State>();
@@ -148,9 +154,9 @@ public class Deliberative implements DeliberativeBehavior {
 					if (next.isStateFinal()) {
 						// If next is a final state, it must be more optimal than the best-so-far
 						bestFinalState = next;
-					} 
-					else {
-						// If next is not a final state, generate its successor states and add them to the queue
+					} else {
+						// If next is not a final state, generate its successor states and add them to
+						// the queue
 						List<State> successors = next.generateSuccessorStates();
 						queue.addAll(successors);
 					}
@@ -161,49 +167,82 @@ public class Deliberative implements DeliberativeBehavior {
 		return bestFinalState;
 	}
 
+	/*
+	 * ASTAR explores the nodes with the lowest cost (cost plus heuristics) first by
+	 * sorting it in a priority queue
+	 */
+
 	public State ASTAR(State initial) {
 		StateComparator compare = new StateComparator();
 		PriorityQueue<State> Q = new PriorityQueue<State>(100000, compare);
-		//List<State> Q = new LinkedList<State>();
 		List<State> visited = new ArrayList<State>();
 		State n = null;
-        
 		Q.add(initial);
-        
-        while (!Q.isEmpty()) {
-        	n = Q.poll();
-        	
-        	if (n.isStateFinal()) {
-        		return n;
-        	}
-        	
-        	
-        	if (n.isStateRedundantOrLowerCost(visited)) {
-        		// add n to C
-        		visited.add(n);
-        		// add successors of n
-        		n.generateSuccessorStates();
-        		Q.addAll(n.getSuccessorStates());
-        	}
 
-        }
-        
+		int counter = 0;
+
+		while (!Q.isEmpty()) {
+			// Returns and remove the element at the top of the Queue
+			n = Q.poll();
+			if (n.isStateFinal()) {
+				return n;
+			}
+
+			if (n.isStateRedundantOrLowerCost(visited)) {
+				visited.add(n);
+				Q.addAll(n.generateSuccessorStates());
+			}
+
+		}
+
 		return n;
 	}
+	/*
+	 * Builds a plan from the sequence of actions from the final state Populates the
+	 * missing actions between pickups and deliveries with appropriate move actions
+	 */
 
+	public Plan getPlan(State finalState, Vehicle vehicle) {
+		City startCity = vehicle.getCurrentCity();
+		City currentCity = startCity;
+		Plan plan = new Plan(startCity);
+
+		for (Tuple action : finalState.pastActions) {
+			City destinationCity;
+			if (action.type == Tuple.Type.DELIVER) {
+				destinationCity = action.task.deliveryCity;
+			} else {
+				destinationCity = action.task.pickupCity;
+			}
+
+			for (City city : currentCity.pathTo(destinationCity)) {
+				plan.appendMove(city);
+			}
+
+			if (action.type == Tuple.Type.DELIVER) {
+				plan.appendDelivery(action.task);
+			} else {
+				plan.appendPickup(action.task);
+			}
+			currentCity = destinationCity;
+
+		}
+
+		return plan;
+	}
 
 	/*
-	 *  Simple BFS - returns the first solution it finds, NOT the optimal
-	 *	Used for testing
+	 * Simple BFS - returns the first solution it finds, NOT the optimal Used for
+	 * testing
 	 */
 	private State simpleBfs(State initial) {
 		// BFS Search
 		State firstSolution = null;
-		
+
 		Queue<State> queue = new LinkedList<State>();
 		List<State> visited = new ArrayList<State>();
 		queue.add(initial);
-		
+
 		while (!queue.isEmpty()) {
 			System.out.println("Queue length = " + queue.size());
 			State next = queue.poll();
@@ -211,7 +250,7 @@ public class Deliberative implements DeliberativeBehavior {
 				firstSolution = next;
 				break;
 			}
-			
+
 			// Check if we have already reached n with lesser cost
 			if (!next.isStateRedundant(visited)) {
 				// n.printState();

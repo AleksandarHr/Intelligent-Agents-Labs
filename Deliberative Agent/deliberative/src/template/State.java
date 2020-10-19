@@ -13,6 +13,7 @@ import logist.topology.Topology.City;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.Comparator;
 import java.util.HashSet;
 import java.util.LinkedList;
 import java.util.List;
@@ -32,8 +33,9 @@ public class State {
 	// previous can be used for cycle detection
 	private State previous;
 	private double heuristics;
+	private boolean setHeuristics;
 
-	public State(Vehicle v, TaskSet initialTasks) {
+	public State(Vehicle v, TaskSet initialTasks, boolean setHeuristics) {
 		this.startingLocation = v.getCurrentCity();
 		this.vehicle = v;
 		this.currentLocation = v.getCurrentCity();
@@ -42,11 +44,15 @@ public class State {
 		this.remainingCapacity = vehicle.capacity();
 		this.pastActions = new ArrayList<Tuple>();
 		this.previous = null;
-		this.heuristics = this.computeHeuristics();
+		this.setHeuristics = setHeuristics;
+		if(setHeuristics) {
+			this.heuristics = this.computeHeuristics();
+		}
+		//this.heuristics = this.computeHeuristics();
 	}
 	
 	public State (City city, double cost, TaskSet running, TaskSet remaining, List<Tuple> actions, 
-			int remainingCapacity, Vehicle v, State previous) {
+			int remainingCapacity, Vehicle v, State previous, boolean setHeuristics) {
 		this.currentLocation = city;
 		this.currentCost = cost;
 		this.runningTasks = running;
@@ -55,7 +61,7 @@ public class State {
 		this.remainingCapacity = remainingCapacity;
 		this.vehicle = v;
 		this.previous = previous;
-		this.heuristics = this.computeHeuristics();
+		this.setHeuristics = setHeuristics;
 	}
 
 	/*
@@ -119,30 +125,43 @@ public class State {
 		return successorStates;
 	}
 	
+	Comparator<Task> meinComparator = (Task t0, Task t1) -> Integer.compare(t0.id, t1.id);
+	
 	public List<State> generateSuccessorStates() {
 		List<State> successorStates = new ArrayList<State>();
-
-		for (Task task : this.remainingTasks) {
-			State n = duplicateState();
-			n.pastActions.add(new Tuple(Tuple.Type.PICKUP, task));
-			n.pickupTask(task);
-			n.currentLocation = task.pickupCity;
-			n.increaseCost(this.currentLocation.distanceTo(n.currentLocation) * this.vehicle.costPerKm());
-			if (task.pickupCity.equals(currentLocation)) {
-				return Arrays.asList(n);
-			}
-			successorStates.add(n);
-		}
-		for (Task task : this.runningTasks) {
+		List<Task> sortedTasks = new ArrayList<Task>(this.runningTasks);
+		sortedTasks.sort(meinComparator);
+		for (Task task : sortedTasks) {
 			State n = duplicateState();
 			n.pastActions.add(new Tuple(Tuple.Type.DELIVER, task));
 			n.deliverTask(task);
 			n.currentLocation = task.deliveryCity;
 			n.increaseCost(this.currentLocation.distanceTo(n.currentLocation) * this.vehicle.costPerKm());
+			if (n.setHeuristics) {
+				n.heuristics = n.computeHeuristics();
+			}
 			if (task.deliveryCity.equals(currentLocation)) {
 				return Arrays.asList(n);
 			}
 			successorStates.add(n);
+		}
+
+		for (Task task : this.remainingTasks) {
+			if(task.weight <= this.remainingCapacity) {
+				State n = duplicateState();
+				n.pastActions.add(new Tuple(Tuple.Type.PICKUP, task));
+				n.pickupTask(task);
+				n.currentLocation = task.pickupCity;
+				n.increaseCost(this.currentLocation.distanceTo(n.currentLocation) * this.vehicle.costPerKm());
+				if (n.setHeuristics) {
+					n.heuristics = n.computeHeuristics();
+				}
+				/*if (task.pickupCity.equals(currentLocation)) {
+					return Arrays.asList(n);
+				}*/
+				successorStates.add(n);
+			}
+			
 		}
 
 
@@ -206,7 +225,7 @@ public class State {
 	 */
 	private State duplicateState() {
 		State dupState = new State(this.currentLocation, this.currentCost, this.runningTasks.clone(),
-				this.remainingTasks.clone(), this.pastActions, this.remainingCapacity, this.vehicle, this);
+				this.remainingTasks.clone(), this.pastActions, this.remainingCapacity, this.vehicle, this, this.setHeuristics);
 		return dupState;
 	}
 
@@ -256,7 +275,7 @@ public class State {
 		if (list.isEmpty()) {
 			return 0.0;
 		}
-		return Collections.max(list) + this.currentCost;
+		return Collections.max(list);
 	}
 	
 	/*
@@ -359,6 +378,21 @@ public class State {
 		return result;
 	}
 
+	private boolean compareTaskSet(TaskSet t1, TaskSet t2) {
+		Set<Integer> hashSetIDs = new HashSet<Integer>();
+		if(t1.size() != t2.size()) {
+			return false;
+		}
+		for(Task task : t1) {
+			hashSetIDs.add(task.id);
+		}
+		for(Task task : t2) {
+			if(!hashSetIDs.contains(task.id)) {
+				return false;
+			}
+		}
+		return true;
+	}
 	@Override
 	public boolean equals(Object obj) {
 		if (this == obj)
@@ -368,6 +402,7 @@ public class State {
 		if (getClass() != obj.getClass())
 			return false;
 		State other = (State) obj;
+
 		if (currentLocation == null) {
 			if (other.currentLocation != null)
 				return false;
@@ -376,13 +411,16 @@ public class State {
 		if (remainingTasks == null) {
 			if (other.remainingTasks != null)
 				return false;
-		} else if (!remainingTasks.equals(other.remainingTasks))
+		} else if (!compareTaskSet(remainingTasks, other.remainingTasks))
 			return false;
 		if (runningTasks == null) {
 			if (other.runningTasks != null)
 				return false;
-		} else if (!runningTasks.equals(other.runningTasks))
+		} else if (!compareTaskSet(runningTasks, other.runningTasks))
 			return false;
+		if(currentCost < other.currentCost) {
+			return false;
+		}
 		return true;
 	}
 

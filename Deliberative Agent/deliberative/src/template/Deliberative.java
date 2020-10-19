@@ -5,10 +5,12 @@ import logist.simulation.Vehicle;
 
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.HashSet;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.PriorityQueue;
 import java.util.Queue;
+import java.util.Set;
 import java.util.concurrent.TimeUnit;
 
 import logist.agent.Agent;
@@ -60,7 +62,11 @@ public class Deliberative implements DeliberativeBehavior {
 	@Override
 	public Plan plan(Vehicle vehicle, TaskSet tasks) {
 		Plan plan;
-		State initialState = new State(vehicle, tasks);
+		boolean heuristics = false;
+		State initialState = new State(vehicle, tasks, heuristics);
+		for (Task t : tasks) {
+			System.out.println(t);
+		}
 		// Agent's plan got interrupted and is recomputing a new plan
 		if (vehicle.getCurrentTasks() != null && vehicle.getCurrentTasks().size() != 0) {
 			// Add the tasks the agent has currently picked up to the new plan
@@ -139,30 +145,36 @@ public class Deliberative implements DeliberativeBehavior {
 		State bestFinalState = null;
 		// BFS Search
 		Queue<State> queue = new LinkedList<State>();
-		List<State> visited = new ArrayList<State>();
 		queue.add(initial);
+		int counter = 0;
+		Set<State> hashSetStates = new HashSet<State>();
 
 		while (!queue.isEmpty()) {
 			State next = queue.poll();
-
+			counter++;
 			// Check if we have already reached n with lesser cost
-			if (!next.isStateRedundant(visited)) {
-				visited.add(next);
-				// Continue exploring next state only if we have not reached any final state yet
-				// or if the best final state so far is more expensive than the next state
-				if (bestFinalState == null || bestFinalState.getCost() > next.getCost()) {
-					if (next.isStateFinal()) {
-						// If next is a final state, it must be more optimal than the best-so-far
-						bestFinalState = next;
-					} else {
-						// If next is not a final state, generate its successor states and add them to
-						// the queue
-						List<State> successors = next.generateSuccessorStates();
-						queue.addAll(successors);
+			// Continue exploring next state only if we have not reached any final state yet
+			// or if the best final state so far is more expensive than the next state
+			if (bestFinalState == null || bestFinalState.getCost() > next.getCost()) {
+				if (next.isStateFinal()) {
+					// If next is a final state, it must be more optimal than the best-so-far
+					bestFinalState = next;
+					hashSetStates.add(next);
+				} else {
+					// If next is not a final state, generate its successor states and add them to
+					// the queue
+					List<State> successors = next.generateSuccessorStates();
+					for (State s : successors) {
+						if (!hashSetStates.contains(s)) {
+							queue.add(s);
+							hashSetStates.add(s);
+						}
 					}
 				}
 			}
+
 		}
+		System.out.println(counter);
 
 		return bestFinalState;
 	}
@@ -174,28 +186,33 @@ public class Deliberative implements DeliberativeBehavior {
 
 	public State ASTAR(State initial) {
 		StateComparator compare = new StateComparator();
-		PriorityQueue<State> Q = new PriorityQueue<State>(100000, compare);
-		List<State> visited = new ArrayList<State>();
-		State n = null;
-		Q.add(initial);
+		PriorityQueue<State> queue = new PriorityQueue<State>(100000, compare);
+		Set<State> hashSetStates = new HashSet<State>();
+		State next = null;
+		queue.add(initial);
 
 		int counter = 0;
 
-		while (!Q.isEmpty()) {
+		while (!queue.isEmpty()) {
 			// Returns and remove the element at the top of the Queue
-			n = Q.poll();
-			if (n.isStateFinal()) {
-				return n;
+			next = queue.poll();
+			if (next.isStateFinal()) {
+				return next;
 			}
 
-			if (n.isStateRedundantOrLowerCost(visited)) {
-				visited.add(n);
-				Q.addAll(n.generateSuccessorStates());
+
+			List<State> successors = next.generateSuccessorStates();
+			for (State s : successors) {
+				if (!hashSetStates.contains(s)) {
+					queue.add(s);
+					hashSetStates.add(s);
+				}
 			}
+
 
 		}
 
-		return n;
+		return next;
 	}
 	/*
 	 * Builds a plan from the sequence of actions from the final state Populates the

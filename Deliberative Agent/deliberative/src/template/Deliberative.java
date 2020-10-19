@@ -5,6 +5,7 @@ import logist.simulation.Vehicle;
 
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedList;
 import java.util.List;
@@ -62,8 +63,7 @@ public class Deliberative implements DeliberativeBehavior {
 	@Override
 	public Plan plan(Vehicle vehicle, TaskSet tasks) {
 		Plan plan;
-		boolean heuristics = false;
-		State initialState = new State(vehicle, tasks, heuristics);
+		State initialState = new State(vehicle, tasks);
 		for (Task t : tasks) {
 			System.out.println(t);
 		}
@@ -159,6 +159,7 @@ public class Deliberative implements DeliberativeBehavior {
 				if (next.isStateFinal()) {
 					// If next is a final state, it must be more optimal than the best-so-far
 					bestFinalState = next;
+					//System.out.println(bestFinalState.getCost());
 					hashSetStates.add(next);
 				} else {
 					// If next is not a final state, generate its successor states and add them to
@@ -178,6 +179,7 @@ public class Deliberative implements DeliberativeBehavior {
 
 		return bestFinalState;
 	}
+	
 
 	/*
 	 * ASTAR explores the nodes with the lowest cost (cost plus heuristics) first by
@@ -188,7 +190,10 @@ public class Deliberative implements DeliberativeBehavior {
 		StateComparator compare = new StateComparator();
 		PriorityQueue<State> queue = new PriorityQueue<State>(100000, compare);
 		Set<State> hashSetStates = new HashSet<State>();
+		HashMap<State, Double> stateCost = new HashMap<State, Double>();
+		stateCost.put(initial, initial.computeHeuristics());
 		State next = null;
+		hashSetStates.add(initial);
 		queue.add(initial);
 
 		int counter = 0;
@@ -197,15 +202,18 @@ public class Deliberative implements DeliberativeBehavior {
 			// Returns and remove the element at the top of the Queue
 			next = queue.poll();
 			if (next.isStateFinal()) {
+				System.out.println(next.getCost());
 				return next;
 			}
 
 
 			List<State> successors = next.generateSuccessorStates();
 			for (State s : successors) {
-				if (!hashSetStates.contains(s)) {
+				double heuristics = s.computeHeuristics();
+				if (!hashSetStates.contains(s) || heuristics < stateCost.get(s)) {
 					queue.add(s);
 					hashSetStates.add(s);
+					stateCost.put(s, heuristics);
 				}
 			}
 

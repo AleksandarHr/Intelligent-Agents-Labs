@@ -27,11 +27,8 @@ public class State {
 	private TaskSet remainingTasks;
 	private int remainingCapacity;
 	private double currentCost;
-	public List<Tuple> pastActions;
 	private List<State> successorStates;
 	private Vehicle vehicle;
-	// previous can be used for cycle detection
-	private State previous;
 	private double heuristics;
 
 	public State(Vehicle v, TaskSet initialTasks) {
@@ -41,84 +38,23 @@ public class State {
 		this.remainingTasks = initialTasks.clone();
 		this.runningTasks = TaskSet.noneOf(initialTasks); //create an empty TaskSet
 		this.remainingCapacity = vehicle.capacity();
-		this.pastActions = new ArrayList<Tuple>();
-		this.previous = null;
-		//this.heuristics = this.computeHeuristics();
 	}
 	
-	public State (City city, double cost, TaskSet running, TaskSet remaining, List<Tuple> actions, 
-			int remainingCapacity, Vehicle v, State previous) {
+	public State (City city, double cost, TaskSet running, TaskSet remaining, 
+			int remainingCapacity, Vehicle v) {
 		this.currentLocation = city;
 		this.currentCost = cost;
 		this.runningTasks = running;
 		this.remainingTasks = remaining;
-		this.pastActions = new ArrayList<Tuple>(actions);
 		this.remainingCapacity = remainingCapacity;
 		this.vehicle = v;
-		this.previous = previous;
+
 	}
 
 	/*
 	 * Generates all successor states of the current one
 	 */
-	public List<State> generateSuccessorStatesOld() {
-		List<State> successorStates = new ArrayList<State>();
-		Set<City> citiesOfInterest = new HashSet<City>();
-		
-		// For all tasks remaining to be picked up
-		List<Task> currentCityPickupTasks = getRemainingTasksInCurrentCity();
-		for (Task t : this.remainingTasks) {
-			// If the task is in current city, pick it up
-			if (currentCityPickupTasks.contains(t)) {
-				State next = duplicateState();
-				next.pickupTask(t);
-				if (!next.hasCycle()) {
-					//next.pastActions.add(new Pickup(t));
-					successorStates.add(next);		
-				}
-			} else {
-				// if not, add the neigbhour city on the path to its pickup city (e.g. the first one)
-				//		to the set of interesting cities
-				List<City> path = this.currentLocation.pathTo(t.pickupCity);
-				citiesOfInterest.add(path.get(0));
-			}
-		}
-
-		// Generate successor states after a delivery action
-		List<Task> currentCityDeliveryTasks = getRunningTasksForCurrentCity();
-		for (Task t : this.runningTasks) {
-			// If the task is to be delivered in the current city, deliver it
-			if (currentCityDeliveryTasks.contains(t)) {
-				State next = duplicateState();
-				next.deliverTask(t);
-				if (!next.hasCycle()) {
-					//next.pastActions.add(new Delivery(t));
-					successorStates.add(next);
-				}
-			} else {
-				// if not, add the neigbhour city on the path to its delivery city (e.g. the first one)
-				//		to the set of interesting cities
-				List<City> path = this.currentLocation.pathTo(t.deliveryCity);
-				citiesOfInterest.add(path.get(0));
-			}
-		}
-		
-		// Perform a move action to each of the cities of interest and create a successor state
-		for (City c : citiesOfInterest) {
-			if (currentLocation.neighbors().contains(c)) {
-				State next = duplicateState();
-				next.setCurrentLocation(c);
-				next.increaseCost(this.vehicle.costPerKm() * currentLocation.distanceTo(c));
-				if (!next.hasCycle()) {
-					//next.pastActions.add(new Move(c));
-					successorStates.add(next);
-				}
-			}
-		}
-		
-		return successorStates;
-	}
-	
+	//Used to sort tasks which can be delivered, in case multiple tasks can be delivered in one city
 	Comparator<Task> meinComparator = (Task t0, Task t1) -> Integer.compare(t0.id, t1.id);
 	
 	public List<State> generateSuccessorStates() {
@@ -127,13 +63,9 @@ public class State {
 		sortedTasks.sort(meinComparator);
 		for (Task task : sortedTasks) {
 			State n = duplicateState();
-			n.pastActions.add(new Tuple(Tuple.Type.DELIVER, task));
 			n.deliverTask(task);
 			n.currentLocation = task.deliveryCity;
-			n.increaseCost(this.currentLocation.distanceTo(n.currentLocation) * this.vehicle.costPerKm());
-			/*if (n.setHeuristics) {
-				n.heuristics = n.computeHeuristics();
-			}*/
+			//If we are in the delivery city, deliver the first task
 			if (task.deliveryCity.equals(currentLocation)) {
 				return Arrays.asList(n);
 			}
@@ -143,16 +75,8 @@ public class State {
 		for (Task task : this.remainingTasks) {
 			if(task.weight <= this.remainingCapacity) {
 				State n = duplicateState();
-				n.pastActions.add(new Tuple(Tuple.Type.PICKUP, task));
 				n.pickupTask(task);
 				n.currentLocation = task.pickupCity;
-				n.increaseCost(this.currentLocation.distanceTo(n.currentLocation) * this.vehicle.costPerKm());
-				/*if (n.setHeuristics) {
-					n.heuristics = n.computeHeuristics();
-				}*/
-				/*if (task.pickupCity.equals(currentLocation)) {
-					return Arrays.asList(n);
-				}*/
 				successorStates.add(n);
 			}
 			
@@ -186,77 +110,25 @@ public class State {
 		this.remainingCapacity += t.weight;
 	}
 
-	/*
-	 * Returns a list of tasks which the agent has not yet picked up and which have
-	 * the same pickup city as the agent's current location
-	 */
-	public List<Task> getRemainingTasksInCurrentCity() {
-		List<Task> currentCityTasks = new LinkedList<Task>();
-		for (Task t : this.remainingTasks) {
-			if (t.pickupCity.equals(this.currentLocation) && t.weight <= this.remainingCapacity) {
-				currentCityTasks.add(t);
-			}
-		}
-		return currentCityTasks;
-	}
-
-	/*
-	 * Returns a list of tasks which the agent has already picked up but has not delivered
-	 *  and which have the same delivery city as the agent's current location
-	 */
-	public List<Task> getRunningTasksForCurrentCity() {
-		List<Task> currentCityTasks = new LinkedList<Task>();
-		for (Task t : this.runningTasks) {
-			if (t.deliveryCity.equals(this.currentLocation)) {
-				currentCityTasks.add(t);
-			}
-		}
-		return currentCityTasks;
-	}
 
 	/*
 	 * Returns a State object which is a duplicate of the current State object
 	 */
 	private State duplicateState() {
 		State dupState = new State(this.currentLocation, this.currentCost, this.runningTasks.clone(),
-				this.remainingTasks.clone(), this.pastActions, this.remainingCapacity, this.vehicle, this);
+				this.remainingTasks.clone(), this.remainingCapacity, this.vehicle);
 		return dupState;
 	}
 
-	/*
-	 * Given a listed of already visited states, checks if the current state has been discovered
-	 */
-	public boolean isStateRedundant(List<State> visited) {
-		for (State c : visited) {
-			if (this.discovered(c)) {
-				return true;
-			}
-		}
-		return false;
-	}
-	
-	/*
-	 * Given a listed of already visited states, checks if the current state has been discovered
-	 * or if it has a discovered taste with lower heursitics cost
-	 */
-	
-	public boolean isStateRedundantOrLowerCost(List<State> visited) {
-		for (State c : visited) {
-			if (this.discovered(c)) {
-				if (this.heuristics < c.getHeuristics()) {
-					return true;
-				}
-				return false;
-			}
-		}
-		return true;
 
-	}
 	
 	public double getHeuristics() {
 		return heuristics;
 	}
 
+	/*
+	 * Calculate heuristics, the longest possible path to finishing a task
+	 */
 	public Double computeHeuristics() {
 		List<Double> list = new LinkedList<Double>();
 		double max = 0.0;
@@ -268,25 +140,14 @@ public class State {
 			list.add(this.currentLocation.distanceTo(task.deliveryCity));
 		}
 		if (list.isEmpty()) {
-			this.heuristics = this.currentCost;
-			return this.currentCost;
+			this.heuristics = 0.0;
+			return 0.0;
 		}
 		max = Collections.max(list);
-		this.heuristics = max + this.currentCost;
-		return max + this.currentCost;
+		this.heuristics = max;
+		return max;
 	}
 	
-	/*
-	 * Returns true if the current state has been previously reached with a lower cost
-	 */
-	private boolean discovered(State other) {
-		if(!this.currentLocation.equals(other.currentLocation) || !this.remainingTasks.equals(other.remainingTasks) ||
-				!this.runningTasks.equals(other.runningTasks) || !(this.currentCost >= other.currentCost)) {
-			return false;
-		} else {
-			return true;
-		}
-	}
 
 	/*
 	 * Returns true if both remainigTasks and runningTasks sets are empty
@@ -295,20 +156,6 @@ public class State {
 		return (this.remainingTasks.isEmpty() && this.runningTasks.isEmpty());
 	}
 	
-	/*
-	 * Traverses all previous states, starting from the curernt one, and checks
-	 * for cycles along the path.
-	 */
-	public boolean hasCycle() {
-		State prev = this.previous;
-		while (prev != null) {
-			if (prev.equals(this)) {
-				return true;
-			}
-			prev = prev.getPreviousState();
-		}
-		return false;
-	}
 
 	// GETTERS & SETTERS
 	public void setCurrentLocation(City currentLocation) {
@@ -317,6 +164,14 @@ public class State {
 
 	public void setRunningTasks(TaskSet currentTasks) {
 		this.runningTasks = currentTasks;
+	}
+	
+	public TaskSet getRunningTasks() {
+		return this.runningTasks;
+	}
+	
+	public TaskSet getRemainingTasks() {
+		return this.remainingTasks;
 	}
 
 	public void setRemainingTasks(TaskSet remainingTasks) {
@@ -331,9 +186,6 @@ public class State {
 		this.currentCost = currentCost;
 	}
 
-	public void setPastActions(List<Tuple> pastActions) {
-		this.pastActions = pastActions;
-	}
 
 	public void setSuccessorStates(List<State> successorStates) {
 		this.successorStates = successorStates;
@@ -350,18 +202,15 @@ public class State {
 	public double getCost() {
 		return this.currentCost;
 	}
+	
+	public Vehicle getVehicle() {
+		return this.vehicle;
+	}
 
 	public City getCurrentLocation() {
 		return this.currentLocation;
 	}
 	
-	public State getPreviousState() {
-		return this.previous;
-	}
-
-	public State setPreviousState(State s) {
-		return this.previous = s;
-	}
 	
 
 	
@@ -376,6 +225,7 @@ public class State {
 		return result;
 	}
 
+	//Helper functions which compares 2 tasksets
 	private boolean compareTaskSet(TaskSet t1, TaskSet t2) {
 		Set<Integer> hashSetIDs = new HashSet<Integer>();
 		if(t1.size() != t2.size()) {
@@ -391,6 +241,7 @@ public class State {
 		}
 		return true;
 	}
+	//Used for hashlist
 	@Override
 	public boolean equals(Object obj) {
 		if (this == obj)
@@ -416,9 +267,6 @@ public class State {
 				return false;
 		} else if (!compareTaskSet(runningTasks, other.runningTasks))
 			return false;
-		if(currentCost != other.currentCost) {
-			return false;
-		}
 		return true;
 	}
 

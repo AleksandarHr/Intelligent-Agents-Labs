@@ -3,6 +3,7 @@ import logist.plan.Action;
 import logist.task.Task;
 import logist.topology.Topology.City;
 
+//Not used
 public class Tuple {
 	public enum Type { DELIVER, PICKUP }
 	public Task task;

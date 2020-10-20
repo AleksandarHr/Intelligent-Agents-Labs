@@ -16,12 +16,16 @@ import java.util.concurrent.TimeUnit;
 
 import logist.agent.Agent;
 import logist.behavior.DeliberativeBehavior;
+import logist.plan.Action;
 import logist.plan.Plan;
 import logist.task.Task;
 import logist.task.TaskDistribution;
 import logist.task.TaskSet;
 import logist.topology.Topology;
 import logist.topology.Topology.City;
+import logist.plan.Action.Move;
+import logist.plan.Action.Pickup;
+import logist.plan.Action.Delivery;
 
 /**
  * An optimal planner for one vehicle.
@@ -79,23 +83,21 @@ public class Deliberative implements DeliberativeBehavior {
 			// ...
 			System.out.println("Planning start.\n");
 			long startTime_star = System.nanoTime();
-			State finalState_star = ASTAR(initialState);
+			plan = ASTAR(initialState);
+			System.out.println("Cost of ASTAR is: " + plan.totalDistance() * vehicle.costPerKm());
 			long endTime_star = System.nanoTime();
 			long duration_star = TimeUnit.SECONDS.convert((endTime_star - startTime_star), TimeUnit.NANOSECONDS);
 			System.out.println("Planning end after " + duration_star + " seconds.\n");
-
-			plan = getPlan(finalState_star, vehicle);
 			break;
 		case BFS:
 			// TODO: Time how long the search takes
 			System.out.println("Planning start.\n");
 			long startTime = System.nanoTime();
-			State finalState = BFS(initialState);
+			plan = BFS(initialState);
+			System.out.println("Cost of BFS is: " + plan.totalDistance() * vehicle.costPerKm());
 			long endTime = System.nanoTime();
 			long duration = TimeUnit.SECONDS.convert((endTime - startTime), TimeUnit.NANOSECONDS);
 			System.out.println("Planning end after " + duration + " seconds.\n");
-
-			plan = getPlan(finalState, vehicle);
 			break;
 		default:
 			throw new AssertionError("Should not happen.");
@@ -140,14 +142,17 @@ public class Deliberative implements DeliberativeBehavior {
 	 * BFS performs a Breadth-First-Search starting from a given initial state and
 	 * returns the optimal final state, pruning some sub-optimal paths along the way
 	 */
-	private State BFS(State initial) {
+	private Plan BFS(State initial) {
 		List<State> finalStates = new ArrayList<State>();
 		State bestFinalState = null;
-		// BFS Search
 		Queue<State> queue = new LinkedList<State>();
 		queue.add(initial);
 		int counter = 0;
 		Set<State> hashSetStates = new HashSet<State>();
+		HashMap<State, Double> costStates = new HashMap<State, Double>();
+		HashMap<State, State> parentStates = new HashMap<State, State>();
+		costStates.put(initial, 0.0);
+		parentStates.put(initial, null);
 
 		while (!queue.isEmpty()) {
 			State next = queue.poll();
@@ -155,21 +160,33 @@ public class Deliberative implements DeliberativeBehavior {
 			// Check if we have already reached n with lesser cost
 			// Continue exploring next state only if we have not reached any final state yet
 			// or if the best final state so far is more expensive than the next state
-			if (bestFinalState == null || bestFinalState.getCost() > next.getCost()) {
-				if (next.isStateFinal()) {
-					// If next is a final state, it must be more optimal than the best-so-far
+
+			if (next.isStateFinal()) {
+				// If next is a final state, it must be more optimal than the best-so-far
+				if(bestFinalState == null || costStates.get(next) < costStates.get(bestFinalState)) {
 					bestFinalState = next;
-					//System.out.println(bestFinalState.getCost());
-					hashSetStates.add(next);
-				} else {
-					// If next is not a final state, generate its successor states and add them to
-					// the queue
-					List<State> successors = next.generateSuccessorStates();
-					for (State s : successors) {
-						if (!hashSetStates.contains(s)) {
-							queue.add(s);
-							hashSetStates.add(s);
-						}
+				}
+			} else {
+				// If next is not a final state, generate its successor states and add them to
+				// the queue
+				List<State> successors = next.generateSuccessorStates();
+				for (State s : successors) {
+					if (!hashSetStates.contains(s)) {
+						queue.add(s);
+						hashSetStates.add(s);
+						costStates.put(s,
+								costStates.get(next) + next.getCurrentLocation().distanceTo(s.getCurrentLocation())
+										* next.getVehicle().costPerKm());
+						parentStates.put(s, next);
+					}
+					//Update the cost of a state
+					if (costStates.get(s) > costStates.get(next)
+							+ next.getCurrentLocation().distanceTo(s.getCurrentLocation())
+									* next.getVehicle().costPerKm()) {
+						costStates.put(s,costStates.get(next)
+								+ next.getCurrentLocation().distanceTo(s.getCurrentLocation())
+								* next.getVehicle().costPerKm());
+						parentStates.put(s, next);
 					}
 				}
 			}
@@ -177,114 +194,109 @@ public class Deliberative implements DeliberativeBehavior {
 		}
 		System.out.println(counter);
 
-		return bestFinalState;
+		return createPath(parentStates, bestFinalState, initial.getCurrentLocation());
 	}
 	
-
-	/*
-	 * ASTAR explores the nodes with the lowest cost (cost plus heuristics) first by
-	 * sorting it in a priority queue
-	 */
-
-	public State ASTAR(State initial) {
-		StateComparator compare = new StateComparator();
-		PriorityQueue<State> queue = new PriorityQueue<State>(100000, compare);
-		Set<State> hashSetStates = new HashSet<State>();
-		HashMap<State, Double> stateCost = new HashMap<State, Double>();
-		stateCost.put(initial, initial.computeHeuristics());
-		State next = null;
-		hashSetStates.add(initial);
-		queue.add(initial);
-
-		int counter = 0;
-
-		while (!queue.isEmpty()) {
-			// Returns and remove the element at the top of the Queue
-			next = queue.poll();
-			if (next.isStateFinal()) {
-				System.out.println(next.getCost());
-				return next;
-			}
-
-
-			List<State> successors = next.generateSuccessorStates();
-			for (State s : successors) {
-				double heuristics = s.computeHeuristics();
-				if (!hashSetStates.contains(s) || heuristics < stateCost.get(s)) {
-					queue.add(s);
-					hashSetStates.add(s);
-					stateCost.put(s, heuristics);
-				}
-			}
-
-
-		}
-
-		return next;
-	}
 	/*
 	 * Builds a plan from the sequence of actions from the final state Populates the
 	 * missing actions between pickups and deliveries with appropriate move actions
 	 */
 
-	public Plan getPlan(State finalState, Vehicle vehicle) {
-		City startCity = vehicle.getCurrentCity();
-		City currentCity = startCity;
-		Plan plan = new Plan(startCity);
-
-		for (Tuple action : finalState.pastActions) {
-			City destinationCity;
-			if (action.type == Tuple.Type.DELIVER) {
-				destinationCity = action.task.deliveryCity;
-			} else {
-				destinationCity = action.task.pickupCity;
+	public Plan createPath(HashMap<State, State> states, State finalState, City initialCity) {
+		List<Action> cityPath = new ArrayList<Action>();
+		State currentState = finalState;
+		while(states.get(currentState) != null) {
+			State parent = states.get(currentState);
+			if(currentState.getRunningTasks().size() > parent.getRunningTasks().size()) {
+				//Checks for the difference between task to deliver and picked up tasks
+				TaskSet iter = TaskSet.intersectComplement(currentState.getRunningTasks(), parent.getRunningTasks());
+				Task firstTask = null;
+				for(Task t : iter) {
+					firstTask = t;
+				}
+				cityPath.add(new Pickup(firstTask));
 			}
-
-			for (City city : currentCity.pathTo(destinationCity)) {
-				plan.appendMove(city);
+			if(currentState.getRunningTasks().size() < parent.getRunningTasks().size()) {
+				TaskSet iter = TaskSet.intersectComplement(parent.getRunningTasks(), currentState.getRunningTasks());
+				Task firstTask = null;
+				for(Task t : iter) {
+					firstTask = t;
+				}
+				cityPath.add(new Delivery(firstTask));
 			}
-
-			if (action.type == Tuple.Type.DELIVER) {
-				plan.appendDelivery(action.task);
-			} else {
-				plan.appendPickup(action.task);
+			if(parent.getCurrentLocation() != currentState.getCurrentLocation()) {
+				List<Action> cityMoves = new ArrayList<Action>();
+				for (City city : parent.getCurrentLocation().pathTo(currentState.getCurrentLocation())) {
+					cityMoves.add(new Move(city));
+				}
+				Collections.reverse(cityMoves);
+				cityPath.addAll(cityMoves);
 			}
-			currentCity = destinationCity;
-
+			currentState = parent;
 		}
-
-		return plan;
+		Collections.reverse(cityPath);
+		return new Plan(initialCity, cityPath);
 	}
 
 	/*
-	 * Simple BFS - returns the first solution it finds, NOT the optimal Used for
-	 * testing
+	 * ASTAR explores the nodes with the lowest cost (cost plus heuristics) first by
+	 * sorting it in a priority queue
 	 */
-	private State simpleBfs(State initial) {
-		// BFS Search
-		State firstSolution = null;
-
-		Queue<State> queue = new LinkedList<State>();
-		List<State> visited = new ArrayList<State>();
-		queue.add(initial);
+	
+	public Plan ASTAR(State initial) {
+		State bestFinalState = null;
+		PriorityQueue<StateComparator> queue = new PriorityQueue<StateComparator>();
+		int counter = 0;
+		Set<State> hashSetStates = new HashSet<State>();
+		HashMap<State, Double> costStates = new HashMap<State, Double>();
+		HashMap<State, State> parentStates = new HashMap<State, State>();
+		costStates.put(initial, 0.0);
+		parentStates.put(initial, null);
+		queue.add(new StateComparator(initial, initial.computeHeuristics()));
+		System.out.println(initial.getHeuristics());
 
 		while (!queue.isEmpty()) {
-			System.out.println("Queue length = " + queue.size());
-			State next = queue.poll();
-			if (next.isStateFinal()) {
-				firstSolution = next;
-				break;
-			}
-
+			StateComparator sc = queue.poll();
+			State next = sc.getState();
+			Double cost = sc.getCost();
+			counter++;
 			// Check if we have already reached n with lesser cost
-			if (!next.isStateRedundant(visited)) {
-				// n.printState();
-				visited.add(next);
-				List<State> successors = next.generateSuccessorStates();
-				queue.addAll(successors);
-			}
-		}
+			// Continue exploring next state only if we have not reached any final state yet
+			// or if the best final state so far is more expensive than the next state
 
-		return firstSolution;
+			if (next.isStateFinal()) {
+				// If next is a final state, it must be more optimal than the best-so-far
+				return createPath(parentStates, next, initial.getCurrentLocation());
+				// hashSetStates.add(next);
+			} else {
+				// If next is not a final state, generate its successor states and add them to
+				// the queue
+				List<State> successors = next.generateSuccessorStates();
+				for (State s : successors) {
+					
+					if (!hashSetStates.contains(s) || costStates.get(s) > costStates.get(next)
+							+ next.getCurrentLocation().distanceTo(s.getCurrentLocation())
+									* next.getVehicle().costPerKm()) {
+						costStates.put(s,costStates.get(next)
+								+ next.getCurrentLocation().distanceTo(s.getCurrentLocation())
+								* next.getVehicle().costPerKm());
+						
+						parentStates.put(s, next);
+						queue.add(new StateComparator(s, costStates.get(next)
+								+ next.getCurrentLocation().distanceTo(s.getCurrentLocation())
+								* next.getVehicle().costPerKm() + s.computeHeuristics()));
+						hashSetStates.add(s);
+					}
+				}
+			}
+
+
+		}
+		System.out.println(counter);
+
+		return createPath(parentStates, bestFinalState, initial.getCurrentLocation());
 	}
+
+
+
 }

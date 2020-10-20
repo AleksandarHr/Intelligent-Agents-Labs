@@ -26,6 +26,7 @@ public class State {
 	private TaskSet runningTasks;
 	private TaskSet remainingTasks;
 	private int remainingCapacity;
+	private double currentCost;
 	private List<State> successorStates;
 	private Vehicle vehicle;
 	private double heuristics;
@@ -39,9 +40,10 @@ public class State {
 		this.remainingCapacity = vehicle.capacity();
 	}
 	
-	public State (City city, TaskSet running, TaskSet remaining, 
+	public State (City city, double cost, TaskSet running, TaskSet remaining, 
 			int remainingCapacity, Vehicle v) {
 		this.currentLocation = city;
+		this.currentCost = cost;
 		this.runningTasks = running;
 		this.remainingTasks = remaining;
 		this.remainingCapacity = remainingCapacity;
@@ -77,9 +79,16 @@ public class State {
 				n.currentLocation = task.pickupCity;
 				successorStates.add(n);
 			}
+			
 		}
-		
+
+
 		return successorStates;
+	}
+
+	
+	public void increaseCost(double additionalCost) {
+		this.currentCost += additionalCost;
 	}
 
 	/*
@@ -106,11 +115,13 @@ public class State {
 	 * Returns a State object which is a duplicate of the current State object
 	 */
 	private State duplicateState() {
-		State dupState = new State(this.currentLocation, this.runningTasks.clone(),
+		State dupState = new State(this.currentLocation, this.currentCost, this.runningTasks.clone(),
 				this.remainingTasks.clone(), this.remainingCapacity, this.vehicle);
 		return dupState;
 	}
 
+
+	
 	public double getHeuristics() {
 		return heuristics;
 	}
@@ -122,11 +133,11 @@ public class State {
 		List<Double> list = new LinkedList<Double>();
 		double max = 0.0;
 		for (Task task : this.remainingTasks) {
-			list.add(this.currentLocation.distanceTo(task.pickupCity) + task.pickupCity.distanceTo(task.deliveryCity));
+			list.add(this.currentLocation.distanceTo(task.pickupCity) * this.vehicle.costPerKm() + task.pickupCity.distanceTo(task.deliveryCity) * this.vehicle.costPerKm());
 		}
 
 		for (Task task : this.runningTasks) {
-			list.add(this.currentLocation.distanceTo(task.deliveryCity));
+			list.add(this.currentLocation.distanceTo(task.deliveryCity) * this.vehicle.costPerKm());
 		}
 		if (list.isEmpty()) {
 			this.heuristics = 0.0;
@@ -171,6 +182,11 @@ public class State {
 		this.remainingCapacity = remainingCapacity;
 	}
 
+	public void setCurrentCost(double currentCost) {
+		this.currentCost = currentCost;
+	}
+
+
 	public void setSuccessorStates(List<State> successorStates) {
 		this.successorStates = successorStates;
 	}
@@ -182,6 +198,10 @@ public class State {
 	public List<State> getSuccessorStates() {
 		return this.successorStates;
 	}
+
+	public double getCost() {
+		return this.currentCost;
+	}
 	
 	public Vehicle getVehicle() {
 		return this.vehicle;
@@ -190,6 +210,9 @@ public class State {
 	public City getCurrentLocation() {
 		return this.currentLocation;
 	}
+	
+	
+
 	
 	
 	@Override

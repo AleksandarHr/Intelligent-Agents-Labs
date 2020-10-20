@@ -84,19 +84,19 @@ public class Deliberative implements DeliberativeBehavior {
 			System.out.println("Planning start.\n");
 			long startTime_star = System.nanoTime();
 			plan = ASTAR(initialState);
-			System.out.println("Cost of ASTAR is: " + plan.totalDistance() * vehicle.costPerKm());
+			System.out.println("Cost of ASTAR is: " + plan.totalDistance());
 			long endTime_star = System.nanoTime();
-			long duration_star = TimeUnit.SECONDS.convert((endTime_star - startTime_star), TimeUnit.NANOSECONDS);
-			System.out.println("Planning end after " + duration_star + " seconds.\n");
+			long duration_star = TimeUnit.MILLISECONDS.convert((endTime_star - startTime_star), TimeUnit.NANOSECONDS);
+			System.out.println("Planning end after " + duration_star + " miliseconds.\n");
 			break;
 		case BFS:
 			// TODO: Time how long the search takes
 			System.out.println("Planning start.\n");
 			long startTime = System.nanoTime();
 			plan = BFS(initialState);
-			System.out.println("Cost of BFS is: " + plan.totalDistance() * vehicle.costPerKm());
+			System.out.println("Cost of BFS is: " + plan.totalDistance());
 			long endTime = System.nanoTime();
-			long duration = TimeUnit.SECONDS.convert((endTime - startTime), TimeUnit.NANOSECONDS);
+			long duration = TimeUnit.MILLISECONDS.convert((endTime - startTime), TimeUnit.NANOSECONDS);
 			System.out.println("Planning end after " + duration + " seconds.\n");
 			break;
 		default:
@@ -244,9 +244,9 @@ public class Deliberative implements DeliberativeBehavior {
 	 */
 	
 	public Plan ASTAR(State initial) {
+		int counter = 0;
 		State bestFinalState = null;
 		PriorityQueue<StateComparator> queue = new PriorityQueue<StateComparator>();
-		int counter = 0;
 		Set<State> hashSetStates = new HashSet<State>();
 		HashMap<State, Double> costStates = new HashMap<State, Double>();
 		HashMap<State, State> parentStates = new HashMap<State, State>();
@@ -256,16 +256,17 @@ public class Deliberative implements DeliberativeBehavior {
 		System.out.println(initial.getHeuristics());
 
 		while (!queue.isEmpty()) {
+			counter++;
 			StateComparator sc = queue.poll();
 			State next = sc.getState();
 			Double cost = sc.getCost();
-			counter++;
 			// Check if we have already reached n with lesser cost
 			// Continue exploring next state only if we have not reached any final state yet
 			// or if the best final state so far is more expensive than the next state
 
 			if (next.isStateFinal()) {
 				// If next is a final state, it must be more optimal than the best-so-far
+				System.out.println(counter);
 				return createPath(parentStates, next, initial.getCurrentLocation());
 				// hashSetStates.add(next);
 			} else {
@@ -292,7 +293,6 @@ public class Deliberative implements DeliberativeBehavior {
 
 
 		}
-		System.out.println(counter);
 
 		return createPath(parentStates, bestFinalState, initial.getCurrentLocation());
 	}

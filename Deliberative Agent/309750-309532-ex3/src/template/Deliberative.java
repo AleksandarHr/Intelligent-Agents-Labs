@@ -97,7 +97,7 @@ public class Deliberative implements DeliberativeBehavior {
 			System.out.println("Cost of BFS is: " + plan.totalDistance());
 			long endTime = System.nanoTime();
 			long duration = TimeUnit.MILLISECONDS.convert((endTime - startTime), TimeUnit.NANOSECONDS);
-			System.out.println("Planning end after " + duration + " seconds.\n");
+			System.out.println("Planning end after " + duration + " miliseconds.\n");
 			break;
 		default:
 			throw new AssertionError("Should not happen.");

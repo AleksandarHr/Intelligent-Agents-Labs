@@ -1,0 +1,88 @@
+<?xml version="1.0" encoding="ISO-8859-1"?>
+
+<history configuration="config\reactive2.xml">
+	<agents>
+		<agent name="reactive-rla">
+			<vehicle name="Intelligent Vehicle"/>
+		</agent>
+		<agent name="reactive-rla">
+			<vehicle name="Dummy Vehicle"/>
+		</agent>
+	</agents>
+	<rounds>
+		<round id="1">
+			<tasks>
+				<task id="0" pickup="Utrecht" delivery="Eindhoven" weight="22" reward="72927"/>
+				<task id="1" pickup="Amsterdam" delivery="Almere" weight="20" reward="97352"/>
+				<task id="2" pickup="Apeldoorn" delivery="Groningen" weight="20" reward="52939"/>
+				<task id="3" pickup="Nijmegen" delivery="Rotterdam" weight="26" reward="64745"/>
+				<task id="4" pickup="Den Haag" delivery="Nijmegen" weight="23" reward="54405"/>
+				<task id="5" pickup="Breda" delivery="Den Haag" weight="19" reward="80214"/>
+				<task id="6" pickup="Amsterdam" delivery="Almere" weight="20" reward="97352"/>
+				<task id="7" pickup="Den Haag" delivery="Groningen" weight="17" reward="8119"/>
+				<task id="8" pickup="Nijmegen" delivery="Almere" weight="14" reward="57539"/>
+				<task id="9" pickup="Den Haag" delivery="Utrecht" weight="26" reward="74637"/>
+				<task id="10" pickup="Breda" delivery="Eindhoven" weight="29" reward="85018"/>
+				<task id="11" pickup="Groningen" delivery="Utrecht" weight="16" reward="30020"/>
+			</tasks>
+			<events>
+				<event id="0" time="0" vehicle="Intelligent Vehicle" pickup="0"/>
+				<event id="1" time="0" vehicle="Dummy Vehicle" pickup="0"/>
+				<event id="2" time="300000000" vehicle="Intelligent Vehicle" move="Almere"/>
+				<event id="3" time="300000000" vehicle="Dummy Vehicle" move="Almere"/>
+				<event id="4" time="781111090" vehicle="Intelligent Vehicle" deliver="0"/>
+				<event id="5" time="781111090" vehicle="Dummy Vehicle" move="Groningen"/>
+				<event id="6" time="1081111077" vehicle="Intelligent Vehicle" pickup="0"/>
+				<event id="7" time="1381111059" vehicle="Intelligent Vehicle" move="Utrecht"/>
+				<event id="8" time="1862222142" vehicle="Intelligent Vehicle" deliver="0"/>
+				<event id="9" time="2162222125" vehicle="Intelligent Vehicle" pickup="0"/>
+				<event id="10" time="2462222103" vehicle="Intelligent Vehicle" move="Rotterdam"/>
+				<event id="11" time="2492222105" vehicle="Dummy Vehicle" deliver="0"/>
+				<event id="12" time="2792222086" vehicle="Dummy Vehicle" move="Apeldoorn"/>
+				<event id="13" time="3154444285" vehicle="Intelligent Vehicle" deliver="0"/>
+				<event id="14" time="3454444269" vehicle="Intelligent Vehicle" pickup="0"/>
+				<event id="15" time="3754444252" vehicle="Intelligent Vehicle" move="Utrecht"/>
+				<event id="16" time="4358888668" vehicle="Dummy Vehicle" pickup="0"/>
+				<event id="17" time="4446666437" vehicle="Intelligent Vehicle" move="Almere"/>
+				<event id="18" time="4658888654" vehicle="Dummy Vehicle" move="Utrecht"/>
+				<event id="19" time="4927777527" vehicle="Intelligent Vehicle" deliver="0"/>
+				<event id="20" time="5227777510" vehicle="Intelligent Vehicle" pickup="0"/>
+				<event id="21" time="5403333061" vehicle="Dummy Vehicle" move="Breda"/>
+				<event id="22" time="5527777496" vehicle="Intelligent Vehicle" move="Utrecht"/>
+				<event id="23" time="6008888581" vehicle="Intelligent Vehicle" move="Eindhoven"/>
+				<event id="24" time="6219999683" vehicle="Dummy Vehicle" deliver="0"/>
+				<event id="25" time="6519999665" vehicle="Dummy Vehicle" pickup="0"/>
+				<event id="26" time="6819999649" vehicle="Dummy Vehicle" move="Rotterdam"/>
+				<event id="27" time="7029999636" vehicle="Intelligent Vehicle" deliver="0"/>
+				<event id="28" time="7329999619" vehicle="Intelligent Vehicle" pickup="0"/>
+				<event id="29" time="7359999620" vehicle="Dummy Vehicle" move="Den Haag"/>
+				<event id="30" time="7629999603" vehicle="Intelligent Vehicle" move="Utrecht"/>
+				<event id="31" time="7642221828" vehicle="Dummy Vehicle" deliver="0"/>
+				<event id="32" time="7942221801" vehicle="Dummy Vehicle" pickup="0"/>
+				<event id="33" time="8242221774" vehicle="Dummy Vehicle" move="Rotterdam"/>
+				<event id="34" time="8524443969" vehicle="Dummy Vehicle" deliver="0"/>
+				<event id="35" time="8651110553" vehicle="Intelligent Vehicle" move="Almere"/>
+				<event id="36" time="8824443869" vehicle="Dummy Vehicle" pickup="0"/>
+				<event id="37" time="9124443822" vehicle="Dummy Vehicle" move="Utrecht"/>
+				<event id="38" time="9132221597" vehicle="Intelligent Vehicle" deliver="0"/>
+				<event id="39" time="9432221560" vehicle="Intelligent Vehicle" pickup="0"/>
+			</events>
+		</round>
+	</rounds>
+	<statistics>
+		<stat rank="1" agent="reactive-rla">
+			<total-tasks value="1"/>
+			<total-distance value="524.9"/>
+			<total-cost value="39368"/>
+			<total-reward value="448351"/>
+			<total-profit value="408983"/>
+		</stat>
+		<stat rank="2" agent="reactive-rla">
+			<total-tasks value="1"/>
+			<total-distance value="640.5"/>
+			<total-cost value="3203"/>
+			<total-reward value="263376"/>
+			<total-profit value="260173"/>
+		</stat>
+	</statistics>
+</history>

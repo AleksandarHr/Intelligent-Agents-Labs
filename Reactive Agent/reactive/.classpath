@@ -6,6 +6,6 @@
 			<attribute name="module" value="true"/>
 		</attributes>
 	</classpathentry>
-	<classpathentry kind="lib" path="D:/CS Work/Eclipse/Intelligent Agents/Labs/Reactive Agent/reactive/logist.jar"/>
+	<classpathentry kind="lib" path="D:/School/Intelligent_agents/Intelligent-Agents-Labs/Reactive Agent/logist/logist.jar"/>
 	<classpathentry kind="output" path="bin"/>
 </classpath>

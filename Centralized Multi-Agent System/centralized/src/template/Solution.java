@@ -96,15 +96,19 @@ public class Solution {
 		
 		for (Vehicle to : this.vehicles) {
 			if (!to.equals(from)) {
+				// only add the task to a vehicle (if not the 'from' vehicle) with sufficient capacity
 				if (to.capacity() >= taskToChange.weight) {
-					// only add the task to a vehicle with sufficient capacity
-					LinkedList<CentralizedAction> newActions = new LinkedList<CentralizedAction>(allActions.get(to));
+					HashMap<Vehicle, LinkedList<CentralizedAction>> newSolutionActions = mapDeepCopy(this.actions);
+					LinkedList<CentralizedAction> newActions = new LinkedList<CentralizedAction>(newSolutionActions.get(to));
+					// add pickup & delivery of the new task at the beginning of the vehicle's actions
 					newActions.addFirst(new CentralizedAction(taskToChange, actionType.DELIVER));
 					newActions.addFirst(new CentralizedAction(taskToChange, actionType.PICKUP));
-					allActions.put(to, newActions);			
-
-					Solution solution = new Solution(this.vehicles, this.tasks);
-					solution.setActions(allActions);
+					newSolutionActions.put(to, newActions);			
+					newSolutionActions.put(from, vehicleActions);
+					
+					// create a new solution and add to the list of neighbour solutions
+					Solution solution = new Solution(this.vehicles, this.tasks.clone());
+					solution.setActions(newSolutionActions);
 					neighbourSolutions.add(solution);
 				}
 			}
@@ -112,10 +116,95 @@ public class Solution {
 		
 		return neighbourSolutions;
 	}
+	
+	
+	private List<Solution> shiftPickupAction(Vehicle v, int actionSequenceNumber) {
+		List<Solution> neighbourSolutions = new LinkedList<Solution>();
+		List<CentralizedAction> oldActions = new LinkedList<CentralizedAction>(this.actions.get(v));
+		
+		CentralizedAction taskToMove = oldActions.get(actionSequenceNumber);
+		if (taskToMove.getType() != actionType.PICKUP) {
+			return neighbourSolutions;
+		}
+		
+		// shift pickup action to the right
+		int moveForwardTo = actionSequenceNumber + 1;	
+		while (moveForwardTo < oldActions.size()) {
+			if (oldActions.get(moveForwardTo).getCurrentTask().equals(taskToMove)) {
+				// stop moving pickup action to the right if we reached the delivery action for the same task
+				break;
+			}
+			//TODO: Do we need to compute capacity and make sure it's all good ??
+			LinkedList<CentralizedAction> newSolutionActions = moveActionFromTo(oldActions, actionSequenceNumber, moveForwardTo);
+			HashMap<Vehicle, LinkedList<CentralizedAction>> allActions = mapDeepCopy(this.actions);
+			allActions.put(v, newSolutionActions);
+			Solution solution = new Solution(this.vehicles, this.tasks.clone());
+			solution.setActions(allActions);
+			neighbourSolutions.add(solution);
+			moveForwardTo++;
+		}
+		
+		// shift pickup action to the left
+		int moveBackwardsTo = actionSequenceNumber - 1;
+		while (moveBackwardsTo >= 0) {
+			// TODO: Make sure we are computing capacity correctly!!!
+			// TODO: Improve efficiency - do not recompute the remaining capacity from scratch every time!!!
+			if (computeRemainingCapacityAtAction(v, oldActions, moveBackwardsTo) <= v.capacity()) {
+				LinkedList<CentralizedAction> newSolutionActions = moveActionFromTo(oldActions, actionSequenceNumber, moveBackwardsTo);
+				HashMap<Vehicle, LinkedList<CentralizedAction>> allActions = mapDeepCopy(this.actions);
+				allActions.put(v, newSolutionActions);
+				Solution solution = new Solution(this.vehicles, this.tasks.clone());
+				solution.setActions(allActions);
+				neighbourSolutions.add(solution);
+			}
+			moveBackwardsTo--;
+		}
+		
+		return neighbourSolutions;
+	}
+	
+	private List<Solution> pickupEarly() {
+		List<Solution> neighbourSolutions = new LinkedList<Solution>();
+		
+		return neighbourSolutions;
+	}
+	
+	private List<Solution> pickupLate() {	
+		List<Solution> neighbourSolutions = new LinkedList<Solution>();
+		
+		return neighbourSolutions;
+	}
+	
+	// HELPERS
+	
+	private LinkedList<CentralizedAction> moveActionFromTo(List<CentralizedAction> actions, int from, int to) {
+		LinkedList<CentralizedAction> updatedActions = new LinkedList<CentralizedAction>(actions);
+		
+		CentralizedAction toMove = actions.remove(from);
+		int moveToIdx = from < to ? (to - 1) : to;
+		updatedActions.add(moveToIdx, toMove);
 
+		return updatedActions;
+	}
 	
-	
-	
+	// Compute the remaining capacity of a vehicle right before performing action with given sequence number
+	private int computeRemainingCapacityAtAction(Vehicle v, List<CentralizedAction> vehicleActions, int actionSequenceNumber) {
+		int remainingCapacity = v.capacity();
+		int runningSequenceNumber = 0;
+		for (CentralizedAction a : vehicleActions) {
+			if (runningSequenceNumber == actionSequenceNumber) {
+				return remainingCapacity;
+			}
+			if (a.getType() == actionType.PICKUP) {
+				remainingCapacity -= a.getCurrentTask().weight;
+			} else if (a.getType() == actionType.DELIVER) {
+				remainingCapacity += a.getCurrentTask().weight;
+			}
+			runningSequenceNumber ++;
+		}
+		
+		return remainingCapacity;
+	}
 	
 	// Given a list of CentralizedAction objects build the corresponding logist plan
 	private Plan buildPlanFromActionList(LinkedList<CentralizedAction> actions, City initialCity) {

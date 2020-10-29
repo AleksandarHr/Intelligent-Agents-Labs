@@ -4,6 +4,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.Map;
 
 import logist.plan.Plan;
 import logist.simulation.Vehicle;
@@ -23,7 +24,7 @@ public class Solution {
 		this.plans = new HashMap<Vehicle, Plan>();	
 		this.actions = new HashMap<Vehicle, LinkedList<CentralizedAction>>();
 		this.vehicles = vehicles;
-		this.tasks = tasks;
+		this.tasks = tasks.clone();
 	}
 	
 	// Initial solution assigns all tasks to the biggest vehicle available
@@ -50,16 +51,16 @@ public class Solution {
 	
 	private Solution buildInitialPlan(Vehicle biggestVehicle) {
 		Solution initialSolution = new Solution(this.vehicles, this.tasks);
-		Plan plan = new Plan(biggestVehicle.getCurrentCity());
+		
 		LinkedList<CentralizedAction> vehicleActions = new LinkedList<CentralizedAction>();
 		for (Task t : initialSolution.tasks) {
 			CentralizedAction pickupAction = new CentralizedAction(t, actionType.PICKUP);
 			CentralizedAction deliverAction = new CentralizedAction(t, actionType.DELIVER);
 			vehicleActions.add(pickupAction);
 			vehicleActions.add(deliverAction);
-			plan.appendPickup(t);
-			plan.appendDelivery(t);
 		}
+		
+		Plan plan = buildPlanFromActionList(vehicleActions, biggestVehicle.getCurrentCity());
 		
 		for (Vehicle v : initialSolution.vehicles) {
 			if (v.equals(biggestVehicle)) {
@@ -78,7 +79,7 @@ public class Solution {
 	// Move firrst task of the 'from' vehicle to any other vehicle possible
 	private List<Solution> changeFirstTaskAgent(Vehicle from) {
 		List<Solution> neighbourSolutions = new ArrayList<Solution>();
-		HashMap<Vehicle, LinkedList<CentralizedAction>> allActions = new HashMap<Vehicle, LinkedList<CentralizedAction>>(this.actions);
+		HashMap<Vehicle, LinkedList<CentralizedAction>> allActions = mapDeepCopy(this.actions);
 
 		// get the first task to be picked up by the 'from' vehicle
 		LinkedList<CentralizedAction> vehicleActions = allActions.get(from);
@@ -101,6 +102,7 @@ public class Solution {
 					newActions.addFirst(new CentralizedAction(taskToChange, actionType.DELIVER));
 					newActions.addFirst(new CentralizedAction(taskToChange, actionType.PICKUP));
 					allActions.put(to, newActions);			
+
 					Solution solution = new Solution(this.vehicles, this.tasks);
 					solution.setActions(allActions);
 					neighbourSolutions.add(solution);
@@ -111,6 +113,10 @@ public class Solution {
 		return neighbourSolutions;
 	}
 
+	
+	
+	
+	
 	// Given a list of CentralizedAction objects build the corresponding logist plan
 	private Plan buildPlanFromActionList(LinkedList<CentralizedAction> actions, City initialCity) {
 		City currentLocation = initialCity;
@@ -133,6 +139,16 @@ public class Solution {
 		}
 			
 		return p;
+	}
+	
+	// Creates and returns a deep copy of provided hashmap
+	private HashMap<Vehicle, LinkedList<CentralizedAction>> mapDeepCopy(HashMap<Vehicle, LinkedList<CentralizedAction>> map) {
+		HashMap<Vehicle, LinkedList<CentralizedAction>> copy = new HashMap<Vehicle, LinkedList<CentralizedAction>>();
+		for (Map.Entry<Vehicle, LinkedList<CentralizedAction>> entry : map.entrySet()) {
+			copy.put(entry.getKey(), new LinkedList<CentralizedAction>(entry.getValue()));
+		}
+		
+		return copy;
 	}
 	
 	

@@ -14,10 +14,10 @@ public class CentralizedAction {
 		DELIVER
 	}
 
-	public CentralizedAction(City currentCity, Task currentTask, actionType type) {
+	public CentralizedAction(Task currentTask, actionType type) {
 		super();
 		this.currentCity = currentCity;
-		this.currentTask = currentTask;
+		//this.currentTask = currentTask;
 		this.type = type;
 	}
 

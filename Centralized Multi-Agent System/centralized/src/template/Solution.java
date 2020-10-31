@@ -2,6 +2,7 @@ package template;
 
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
@@ -29,12 +30,7 @@ public class Solution {
 	
 	// Initial solution assigns all tasks to the biggest vehicle available
 	public Solution createInitialSolution() {
-		Vehicle biggestVehicle = null;
-		for (Vehicle v : this.vehicles) {
-			if (biggestVehicle == null || biggestVehicle.capacity() < v.capacity()) {
-				biggestVehicle = v;
-			}
-		}
+		Vehicle biggestVehicle = findBiggestVehicle(this.vehicles);
 		
 		// If there is a task which exceeds the capacity of the biggest vehicle
 		// then there is no solution
@@ -47,6 +43,13 @@ public class Solution {
 		
 		Solution initialSolution = buildInitialPlan(biggestVehicle);
 		return initialSolution;
+	}
+	
+	public List<Solution> generateNeighbourSolutions() {
+		List<Solution> neighbours = new LinkedList<Solution>();
+		Vehicle biggest = findBiggestVehicle(this.vehicles);
+		neighbours = changeFirstTaskAgent(biggest);
+		return neighbours;
 	}
 	
 	private Solution buildInitialPlan(Vehicle biggestVehicle) {
@@ -83,17 +86,20 @@ public class Solution {
 
 		// get the first task to be picked up by the 'from' vehicle
 		LinkedList<CentralizedAction> vehicleActions = allActions.get(from);
+		if (vehicleActions.size() <= 0) {
+			return neighbourSolutions;
+		}
 		Task taskToChange = vehicleActions.get(0).getCurrentTask();
 		// remove the task pickup from the plan
 		vehicleActions.remove(0);
 		
-		for (CentralizedAction action : vehicleActions) {
-			if (action.getCurrentTask().equals(taskToChange)) {
-				// remove the task delivery from the plan
-				vehicleActions.remove(action);
+		for (int i = 0; i < vehicleActions.size(); i++) {
+			if(vehicleActions.get(i).getCurrentTask().equals(taskToChange)) {
+				vehicleActions.remove(i);
+				break;
 			}
 		}
-		
+	
 		for (Vehicle to : this.vehicles) {
 			if (!to.equals(from)) {
 				// only add the task to a vehicle (if not the 'from' vehicle) with sufficient capacity
@@ -207,7 +213,7 @@ public class Solution {
 	}
 	
 	// Given a list of CentralizedAction objects build the corresponding logist plan
-	private Plan buildPlanFromActionList(LinkedList<CentralizedAction> actions, City initialCity) {
+	public Plan buildPlanFromActionList(LinkedList<CentralizedAction> actions, City initialCity) {
 		City currentLocation = initialCity;
 		Plan p = new Plan(initialCity);
 		for (CentralizedAction a : actions) {
@@ -240,6 +246,27 @@ public class Solution {
 		return copy;
 	}
 	
+	
+	public Solution solutionDeepCopy() {
+		Solution copy = new Solution(this.vehicles, this.tasks.clone());
+		copy.setActions(this.mapDeepCopy(this.actions));
+		HashMap<Vehicle, Plan> plansCopy = new HashMap<Vehicle, Plan>();
+		for (Map.Entry<Vehicle, Plan> entry : this.plans.entrySet()) {
+			plansCopy.put(entry.getKey(), entry.getValue());
+		}
+		copy.setPlans(plansCopy);
+		return copy;
+	}
+	
+	private Vehicle findBiggestVehicle(List<Vehicle> vehicles) {
+		Vehicle biggestVehicle = vehicles.get(0);
+		for (Vehicle v : this.vehicles) {
+			if (biggestVehicle == null || biggestVehicle.capacity() < v.capacity()) {
+				biggestVehicle = v;
+			}
+		}
+		return biggestVehicle;
+	}
 	
 	// GETTERS & SETTERS
 	public HashMap<Vehicle, Plan> getPlans() {

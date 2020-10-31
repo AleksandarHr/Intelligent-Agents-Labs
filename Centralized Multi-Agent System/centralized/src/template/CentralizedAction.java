@@ -15,10 +15,13 @@ public class CentralizedAction {
 	}
 
 	public CentralizedAction(Task currentTask, actionType type) {
-		super();
-		this.currentCity = currentCity;
-		//this.currentTask = currentTask;
+		this.currentTask = currentTask;
 		this.type = type;
+		if (type == actionType.PICKUP) {
+			this.currentCity = currentTask.pickupCity;
+		} else if (type == actionType.DELIVER) {
+			this.currentCity = currentTask.deliveryCity;
+		}
 	}
 
 	public City getCurrentCity() {

@@ -79,8 +79,10 @@ public class CentralizedTemplate implements CentralizedBehavior {
         List<Plan> plans = slsPlans(vehicles, tasks, iterationsBound, p);
         long time_end = System.currentTimeMillis();
         long duration = time_end - time_start;
-        System.out.println("The plan was generated in " + duration + " milliseconds.");
-        
+        System.out.println("Start at : " + vehicles.get(0).getCurrentCity() + " :: " + plans.get(0));
+        System.out.println("Start at : " + vehicles.get(1).getCurrentCity() + " :: " + plans.get(1));
+        System.out.println("Start at : " + vehicles.get(2).getCurrentCity() + " :: " + plans.get(2));
+        System.out.println("Start at : " + vehicles.get(3).getCurrentCity() + " :: " + plans.get(3));
         return plans;
     }
 
@@ -110,7 +112,7 @@ public class CentralizedTemplate implements CentralizedBehavior {
     }
     
     private List<Plan> slsPlans(List<Vehicle> vehicles, TaskSet tasks, int iterationsBound, double p) {
-    	List<Plan> optimalVehiclePlans = new ArrayList<Plan>();
+    	List<Plan> optimalVehiclePlans = new ArrayList<Plan>(vehicles.size());
     	
     	Solution currentBestSolution = new Solution(vehicles, tasks);
     	currentBestSolution = currentBestSolution.createInitialSolution();
@@ -140,8 +142,9 @@ public class CentralizedTemplate implements CentralizedBehavior {
     		counter ++;
     	}
     	
-    	for (Map.Entry<Vehicle, LinkedList<CentralizedAction>> actions: currentBestSolution.getActions().entrySet()) {
-    		Plan plan = currentBestSolution.buildPlanFromActionList(actions.getValue(), actions.getKey().getCurrentCity());
+    	for (Vehicle v : vehicles) {
+    		LinkedList<CentralizedAction> actions = currentBestSolution.getActions().get(v);
+    		Plan plan = currentBestSolution.buildPlanFromActionList(actions, v.getCurrentCity());
     		optimalVehiclePlans.add(plan);
     	}
 

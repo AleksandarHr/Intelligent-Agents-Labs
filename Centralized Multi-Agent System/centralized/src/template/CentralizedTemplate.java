@@ -79,10 +79,6 @@ public class CentralizedTemplate implements CentralizedBehavior {
         List<Plan> plans = slsPlans(vehicles, tasks, iterationsBound, p);
         long time_end = System.currentTimeMillis();
         long duration = time_end - time_start;
-        System.out.println("Start at : " + vehicles.get(0).getCurrentCity() + " :: " + plans.get(0));
-        System.out.println("Start at : " + vehicles.get(1).getCurrentCity() + " :: " + plans.get(1));
-        System.out.println("Start at : " + vehicles.get(2).getCurrentCity() + " :: " + plans.get(2));
-        System.out.println("Start at : " + vehicles.get(3).getCurrentCity() + " :: " + plans.get(3));
         return plans;
     }
 
@@ -150,8 +146,6 @@ public class CentralizedTemplate implements CentralizedBehavior {
 
     	return optimalVehiclePlans;
     }
-    
-    
     
 	// Compute all vehicles' plans' costs and return as hashmap
     private HashMap<Vehicle, Double> computeCostsForAllVehicles(List<Vehicle> vehicles, HashMap<Vehicle, LinkedList<CentralizedAction>> allActions) {

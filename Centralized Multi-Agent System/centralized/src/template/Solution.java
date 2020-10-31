@@ -49,6 +49,13 @@ public class Solution {
 		List<Solution> neighbours = new LinkedList<Solution>();
 		Vehicle biggest = findBiggestVehicle(this.vehicles);
 		neighbours = changeFirstTaskAgent(biggest);
+		
+		for (int i = 0; i < this.actions.get(biggest).size(); i ++ ) {
+			if (this.actions.get(biggest).get(i).getType() == actionType.PICKUP) {
+				neighbours.addAll(shiftPickupAction(biggest, i));	
+			}
+		}
+		
 		return neighbours;
 	}
 	
@@ -133,10 +140,14 @@ public class Solution {
 			return neighbourSolutions;
 		}
 		
+		if (actionSequenceNumber < 0 || actionSequenceNumber >= oldActions.size()) {
+			return neighbourSolutions;
+		}
+		
 		// shift pickup action to the right
 		int moveForwardTo = actionSequenceNumber + 1;	
 		while (moveForwardTo < oldActions.size()) {
-			if (oldActions.get(moveForwardTo).getCurrentTask().equals(taskToMove)) {
+			if (oldActions.get(moveForwardTo).getCurrentTask().equals(taskToMove.getCurrentTask())) {
 				// stop moving pickup action to the right if we reached the delivery action for the same task
 				break;
 			}
@@ -155,7 +166,11 @@ public class Solution {
 		while (moveBackwardsTo >= 0) {
 			// TODO: Make sure we are computing capacity correctly!!!
 			// TODO: Improve efficiency - do not recompute the remaining capacity from scratch every time!!!
-			if (computeRemainingCapacityAtAction(v, oldActions, moveBackwardsTo) <= v.capacity()) {
+			if (oldActions.get(moveBackwardsTo).getCurrentTask().equals(taskToMove.getCurrentTask())) {
+				// stop moving deliver action to the left if we reached the pickup action for the same task
+				break;
+			}
+			if (computeRemainingCapacityAtAction(v, oldActions, moveBackwardsTo) > 0) {
 				LinkedList<CentralizedAction> newSolutionActions = moveActionFromTo(oldActions, actionSequenceNumber, moveBackwardsTo);
 				HashMap<Vehicle, LinkedList<CentralizedAction>> allActions = mapDeepCopy(this.actions);
 				allActions.put(v, newSolutionActions);
@@ -186,7 +201,7 @@ public class Solution {
 	private LinkedList<CentralizedAction> moveActionFromTo(List<CentralizedAction> actions, int from, int to) {
 		LinkedList<CentralizedAction> updatedActions = new LinkedList<CentralizedAction>(actions);
 		
-		CentralizedAction toMove = actions.remove(from);
+		CentralizedAction toMove = updatedActions.remove(from);
 		int moveToIdx = from < to ? (to - 1) : to;
 		updatedActions.add(moveToIdx, toMove);
 

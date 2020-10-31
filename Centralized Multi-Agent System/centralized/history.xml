@@ -45,38 +45,24 @@
 			</tasks>
 			<events>
 				<event id="0" time="0" vehicle="Vehicle 1" move="Leeds"/>
-				<event id="1" time="0" vehicle="Vehicle 2" pickup="0"/>
-				<event id="2" time="299999995" vehicle="Vehicle 2" move="Birmingham"/>
-				<event id="3" time="1094444394" vehicle="Vehicle 1" move="Sheffield"/>
-				<event id="4" time="1553333268" vehicle="Vehicle 1" move="Birmingham"/>
-				<event id="5" time="1577777712" vehicle="Vehicle 2" move="London"/>
-				<event id="6" time="2555555454" vehicle="Vehicle 1" pickup="1"/>
-				<event id="7" time="2855555446" vehicle="Vehicle 1" move="Manchester"/>
-				<event id="8" time="2888888777" vehicle="Vehicle 2" move="Portsmouth"/>
-				<event id="9" time="3719999860" vehicle="Vehicle 2" deliver="0"/>
-				<event id="10" time="3909999852" vehicle="Vehicle 1" deliver="1"/>
-				<event id="11" time="4209999840" vehicle="Vehicle 1" move="Birmingham"/>
-				<event id="12" time="5264444243" vehicle="Vehicle 1" move="Cardiff"/>
-				<event id="13" time="6542221963" vehicle="Vehicle 1" pickup="2"/>
-				<event id="14" time="6842221949" vehicle="Vehicle 1" move="Birmingham"/>
-				<event id="15" time="8119999625" vehicle="Vehicle 1" move="London"/>
-				<event id="16" time="9431110636" vehicle="Vehicle 1" move="Norwich"/>
-				<event id="17" time="10708888304" vehicle="Vehicle 1" deliver="2"/>
-				<event id="18" time="11008888280" vehicle="Vehicle 1" move="London"/>
-				<event id="19" time="12286665931" vehicle="Vehicle 1" move="Birmingham"/>
-				<event id="20" time="13597776886" vehicle="Vehicle 1" move="Manchester"/>
-				<event id="21" time="14652221195" vehicle="Vehicle 1" pickup="3"/>
-				<event id="22" time="14952221171" vehicle="Vehicle 1" move="Birmingham"/>
+				<event id="1" time="1094444415" vehicle="Vehicle 1" move="Sheffield"/>
+				<event id="2" time="1553333288" vehicle="Vehicle 1" move="Birmingham"/>
+				<event id="3" time="2555555473" vehicle="Vehicle 1" move="Cardiff"/>
+				<event id="4" time="3833333198" vehicle="Vehicle 1" pickup="0"/>
+				<event id="5" time="4133333187" vehicle="Vehicle 1" move="Birmingham"/>
+				<event id="6" time="5411110915" vehicle="Vehicle 1" move="London"/>
+				<event id="7" time="6722221931" vehicle="Vehicle 1" move="Portsmouth"/>
+				<event id="8" time="7553332972" vehicle="Vehicle 1" deliver="0"/>
 			</events>
 		</round>
 	</rounds>
 	<statistics>
 		<stat rank="1" agent="centralized-random">
 			<total-tasks value="30"/>
-			<total-distance value="1613.4"/>
-			<total-cost value="8067"/>
-			<total-reward value="184255"/>
-			<total-profit value="176188"/>
+			<total-distance value="652.8"/>
+			<total-cost value="3264"/>
+			<total-reward value="51114"/>
+			<total-profit value="47850"/>
 		</stat>
 	</statistics>
 </history>

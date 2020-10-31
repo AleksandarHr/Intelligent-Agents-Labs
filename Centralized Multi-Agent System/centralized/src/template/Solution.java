@@ -6,6 +6,7 @@ import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
+import java.util.Random;
 
 import logist.plan.Plan;
 import logist.simulation.Vehicle;
@@ -24,8 +25,34 @@ public class Solution {
 	public Solution(List<Vehicle> vehicles, TaskSet tasks) {
 		this.plans = new HashMap<Vehicle, Plan>();	
 		this.actions = new HashMap<Vehicle, LinkedList<CentralizedAction>>();
+		for (Vehicle v : vehicles) {
+			this.actions.put(v, new LinkedList<CentralizedAction>());
+		}
 		this.vehicles = vehicles;
 		this.tasks = tasks.clone();
+	}
+	
+	public Solution createRandomInitialSolution() {
+		for (Task t : this.tasks) {
+			Random rand = new Random();
+			Vehicle randomVehicle = this.vehicles.get(rand.nextInt(this.vehicles.size()));
+			while (randomVehicle.capacity() < t.weight) {
+				randomVehicle = this.vehicles.get(rand.nextInt(this.vehicles.size()));
+			}
+			LinkedList<CentralizedAction> actionsSoFar = this.actions.get(randomVehicle);
+			actionsSoFar.add(new CentralizedAction(t, actionType.PICKUP));
+			actionsSoFar.add(new CentralizedAction(t, actionType.DELIVER));
+			this.actions.put(randomVehicle, actionsSoFar);
+		}
+		
+		Solution initialSolution = new Solution(this.vehicles, this.tasks);
+		initialSolution.setActions(this.actions);
+		for (Vehicle v : this.vehicles) {
+			Plan plan = buildPlanFromActionList(initialSolution.getActions().get(v), v.getCurrentCity());
+			this.plans.put(v, plan);
+		}
+		initialSolution.setPlans(this.plans);
+		return initialSolution;
 	}
 	
 	// Initial solution assigns all tasks to the biggest vehicle available
@@ -47,15 +74,19 @@ public class Solution {
 	
 	public List<Solution> generateNeighbourSolutions() {
 		List<Solution> neighbours = new LinkedList<Solution>();
-		Vehicle biggest = findBiggestVehicle(this.vehicles);
-		neighbours = changeFirstTaskAgent(biggest);
+//		Vehicle biggest = findBiggestVehicle(this.vehicles);
 		
-		for (int i = 0; i < this.actions.get(biggest).size(); i ++ ) {
-			if (this.actions.get(biggest).get(i).getType() == actionType.PICKUP) {
-				neighbours.addAll(shiftPickupAction(biggest, i));	
+		Random rand = new Random();
+		Vehicle randVehicle = this.vehicles.get(rand.nextInt(this.vehicles.size()));
+//		for (Vehicle v : this.vehicles) {
+			neighbours = changeFirstTaskAgent(randVehicle);
+		
+			for (int i = 0; i < this.actions.get(randVehicle).size(); i ++ ) {
+				if (this.actions.get(randVehicle).get(i).getType() == actionType.PICKUP) {
+					neighbours.addAll(shiftPickupAction(randVehicle, i));	
+				}
 			}
-		}
-		
+//		}
 		return neighbours;
 	}
 	
@@ -184,20 +215,8 @@ public class Solution {
 		return neighbourSolutions;
 	}
 	
-	private List<Solution> pickupEarly() {
-		List<Solution> neighbourSolutions = new LinkedList<Solution>();
-		
-		return neighbourSolutions;
-	}
-	
-	private List<Solution> pickupLate() {	
-		List<Solution> neighbourSolutions = new LinkedList<Solution>();
-		
-		return neighbourSolutions;
-	}
 	
 	// HELPERS
-	
 	private LinkedList<CentralizedAction> moveActionFromTo(List<CentralizedAction> actions, int from, int to) {
 		LinkedList<CentralizedAction> updatedActions = new LinkedList<CentralizedAction>(actions);
 		

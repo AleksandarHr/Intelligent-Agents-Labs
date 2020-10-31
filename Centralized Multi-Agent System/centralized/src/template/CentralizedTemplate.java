@@ -75,8 +75,9 @@ public class CentralizedTemplate implements CentralizedBehavior {
 //        }
         
         int iterationsBound = 10000;
-        double p = 0.3;
+        double p = 0.5;
         List<Plan> plans = slsPlans(vehicles, tasks, iterationsBound, p);
+        System.out.println(plans);
         long time_end = System.currentTimeMillis();
         long duration = time_end - time_start;
         return plans;
@@ -85,13 +86,13 @@ public class CentralizedTemplate implements CentralizedBehavior {
     private Plan naivePlan(Vehicle vehicle, TaskSet tasks) {
         City current = vehicle.getCurrentCity();
         Plan plan = new Plan(current);
-
+        double cost = 0.0;
         for (Task task : tasks) {
             // move: current city => pickup location
             for (City city : current.pathTo(task.pickupCity)) {
                 plan.appendMove(city);
             }
-
+            cost += current.distanceTo(task.pickupCity);
             plan.appendPickup(task);
 
             // move: pickup location => delivery location
@@ -100,10 +101,11 @@ public class CentralizedTemplate implements CentralizedBehavior {
             }
 
             plan.appendDelivery(task);
-
+            cost += task.pickupCity.distanceTo(task.deliveryCity);
             // set current city
             current = task.deliveryCity;
         }
+        System.out.println(cost * vehicle.costPerKm());
         return plan;
     }
     
@@ -111,12 +113,14 @@ public class CentralizedTemplate implements CentralizedBehavior {
     	List<Plan> optimalVehiclePlans = new ArrayList<Plan>(vehicles.size());
     	
     	Solution currentBestSolution = new Solution(vehicles, tasks);
-    	currentBestSolution = currentBestSolution.createInitialSolution();
+    	currentBestSolution = currentBestSolution.createRandomInitialSolution();
+    	System.out.println("INITIAL SOLUTIONS");
+    	System.out.println(currentBestSolution.getPlans());
+//    	currentBestSolution = currentBestSolution.createInitialSolution();
     	double currentMinimalCost = Double.MAX_VALUE;
     	int counter = 0;
-    	
     	while(counter < iterationsBound) {
-    		Solution oldSolution = currentBestSolution.solutionDeepCopy();
+        	Solution oldSolution = currentBestSolution.solutionDeepCopy();
     		List<Solution> neighbourSolutions = currentBestSolution.generateNeighbourSolutions();
     		for (Solution neighbour : neighbourSolutions) {
     			HashMap<Vehicle, LinkedList<CentralizedAction>> solutionActions = neighbour.getActions();
@@ -130,20 +134,22 @@ public class CentralizedTemplate implements CentralizedBehavior {
     				currentMinimalCost = tempCost;
     			}
     		}
-    		
+        	
     		if (Math.random() <= p) {
     			// with probability 1-p, we keep the old solution
     			currentBestSolution = oldSolution;
+//    			Random rand = new Random();
+//    			currentBestSolution = neighbourSolutions.get(rand.nextInt(neighbourSolutions.size()));
     		}
     		counter ++;
     	}
-    	
+
     	for (Vehicle v : vehicles) {
     		LinkedList<CentralizedAction> actions = currentBestSolution.getActions().get(v);
     		Plan plan = currentBestSolution.buildPlanFromActionList(actions, v.getCurrentCity());
     		optimalVehiclePlans.add(plan);
     	}
-
+    	System.out.println("TOTAL FINAL COST = " + currentMinimalCost);
     	return optimalVehiclePlans;
     }
     

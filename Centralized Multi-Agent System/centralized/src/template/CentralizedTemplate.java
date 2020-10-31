@@ -75,9 +75,13 @@ public class CentralizedTemplate implements CentralizedBehavior {
 //        }
         
         int iterationsBound = 10000;
-        double p = 0.5;
+        double p = 0.3;
         List<Plan> plans = slsPlans(vehicles, tasks, iterationsBound, p);
-        System.out.println(plans);
+        double cost = 0.0;
+        for (int i = 0; i < plans.size(); i++) {
+        	cost += plans.get(i).totalDistance() * vehicles.get(i).costPerKm();
+        }
+        System.out.println("TOTAL COST = " + cost);
         long time_end = System.currentTimeMillis();
         long duration = time_end - time_start;
         return plans;
@@ -115,7 +119,6 @@ public class CentralizedTemplate implements CentralizedBehavior {
     	Solution currentBestSolution = new Solution(vehicles, tasks);
     	currentBestSolution = currentBestSolution.createRandomInitialSolution();
     	System.out.println("INITIAL SOLUTIONS");
-    	System.out.println(currentBestSolution.getPlans());
 //    	currentBestSolution = currentBestSolution.createInitialSolution();
     	double currentMinimalCost = Double.MAX_VALUE;
     	int counter = 0;
@@ -137,9 +140,13 @@ public class CentralizedTemplate implements CentralizedBehavior {
         	
     		if (Math.random() <= p) {
     			// with probability 1-p, we keep the old solution
-    			currentBestSolution = oldSolution;
-//    			Random rand = new Random();
-//    			currentBestSolution = neighbourSolutions.get(rand.nextInt(neighbourSolutions.size()));
+//    			currentBestSolution = oldSolution;
+    			Random rand = new Random();
+    			if (neighbourSolutions.size() > 0) {
+    				currentBestSolution = neighbourSolutions.get(rand.nextInt(neighbourSolutions.size()));
+    			} else {
+    				currentBestSolution = oldSolution;
+    			}
     		}
     		counter ++;
     	}
@@ -149,7 +156,7 @@ public class CentralizedTemplate implements CentralizedBehavior {
     		Plan plan = currentBestSolution.buildPlanFromActionList(actions, v.getCurrentCity());
     		optimalVehiclePlans.add(plan);
     	}
-    	System.out.println("TOTAL FINAL COST = " + currentMinimalCost);
+//    	System.out.println("TOTAL FINAL COST = " + currentMinimalCost);
     	return optimalVehiclePlans;
     }
     

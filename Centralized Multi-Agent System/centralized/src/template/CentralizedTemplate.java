@@ -32,103 +32,92 @@ import template.CentralizedAction.actionType;
 @SuppressWarnings("unused")
 public class CentralizedTemplate implements CentralizedBehavior {
 
-    private Topology topology;
-    private TaskDistribution distribution;
-    private Agent agent;
-    private long timeout_setup;
-    private long timeout_plan;
-    
-    @Override
-    public void setup(Topology topology, TaskDistribution distribution,
-            Agent agent) {
-        
-        // this code is used to get the timeouts
-        LogistSettings ls = null;
-        try {
-            ls = Parsers.parseSettings("config" + File.separator + "settings_default.xml");
-        }
-        catch (Exception exc) {
-            System.out.println("There was a problem loading the configuration file.");
-        }
-        
-        // the setup method cannot last more than timeout_setup milliseconds
-        timeout_setup = ls.get(LogistSettings.TimeoutKey.SETUP);
-        // the plan method cannot execute more than timeout_plan milliseconds
-        timeout_plan = ls.get(LogistSettings.TimeoutKey.PLAN);
-        
-        this.topology = topology;
-        this.distribution = distribution;
-        this.agent = agent;
-    }
+	private Topology topology;
+	private TaskDistribution distribution;
+	private Agent agent;
+	private long timeout_setup;
+	private long timeout_plan;
 
-    @Override
-    public List<Plan> plan(List<Vehicle> vehicles, TaskSet tasks) {
-        long time_start = System.currentTimeMillis();
-        
-//		System.out.println("Agent " + agent.id() + " has tasks " + tasks);
-//        Plan planVehicle1 = naivePlan(vehicles.get(0), tasks);
-//
-//        List<Plan> plans = new ArrayList<Plan>();
-//        plans.add(planVehicle1);
-//        while (plans.size() < vehicles.size()) {
-//            plans.add(Plan.EMPTY);
-//        }
-        
-        int iterationsBound = 10000;
-        double p = 0.3;
-        List<Plan> plans = slsPlans(vehicles, tasks, iterationsBound, p);
-        double cost = 0.0;
-        for (int i = 0; i < plans.size(); i++) {
-        	cost += plans.get(i).totalDistance() * vehicles.get(i).costPerKm();
-        }
-        System.out.println("TOTAL COST = " + cost);
-        long time_end = System.currentTimeMillis();
-        long duration = time_end - time_start;
-        return plans;
-    }
+	@Override
+	public void setup(Topology topology, TaskDistribution distribution, Agent agent) {
 
-    private Plan naivePlan(Vehicle vehicle, TaskSet tasks) {
-        City current = vehicle.getCurrentCity();
-        Plan plan = new Plan(current);
-        double cost = 0.0;
-        for (Task task : tasks) {
-            // move: current city => pickup location
-            for (City city : current.pathTo(task.pickupCity)) {
-                plan.appendMove(city);
-            }
-            cost += current.distanceTo(task.pickupCity);
-            plan.appendPickup(task);
+		// this code is used to get the timeouts
+		LogistSettings ls = null;
+		try {
+			ls = Parsers.parseSettings("config" + File.separator + "settings_default.xml");
+		} catch (Exception exc) {
+			System.out.println("There was a problem loading the configuration file.");
+		}
 
-            // move: pickup location => delivery location
-            for (City city : task.path()) {
-                plan.appendMove(city);
-            }
+		// the setup method cannot last more than timeout_setup milliseconds
+		timeout_setup = ls.get(LogistSettings.TimeoutKey.SETUP);
+		// the plan method cannot execute more than timeout_plan milliseconds
+		timeout_plan = ls.get(LogistSettings.TimeoutKey.PLAN);
 
-            plan.appendDelivery(task);
-            cost += task.pickupCity.distanceTo(task.deliveryCity);
-            // set current city
-            current = task.deliveryCity;
-        }
-        System.out.println(cost * vehicle.costPerKm());
-        return plan;
-    }
-    
-    private List<Plan> slsPlans(List<Vehicle> vehicles, TaskSet tasks, int iterationsBound, double p){
-    	Solution currentBestSolution = new Solution(vehicles, tasks);
-    	currentBestSolution.createRandomInitialSolution();
+		this.topology = topology;
+		this.distribution = distribution;
+		this.agent = agent;
+	}
+
+	@Override
+	public List<Plan> plan(List<Vehicle> vehicles, TaskSet tasks) {
+		long time_start = System.currentTimeMillis();
+		int iterationsBound = 10000;
+		double p = 0.3;
+		List<Plan> plans = slsPlans(vehicles, tasks, iterationsBound, p, time_start);
+		double cost = 0.0;
+		for (int i = 0; i < plans.size(); i++) {
+			cost += plans.get(i).totalDistance() * vehicles.get(i).costPerKm();
+		}
+		System.out.println("TOTAL COST = " + cost);
+		long time_end = System.currentTimeMillis();
+		long duration = time_end - time_start;
+		System.out.println("Plan generated in " + duration);
+		return plans;
+	}
+
+	private Plan naivePlan(Vehicle vehicle, TaskSet tasks) {
+		City current = vehicle.getCurrentCity();
+		Plan plan = new Plan(current);
+		double cost = 0.0;
+		for (Task task : tasks) {
+			// move: current city => pickup location
+			for (City city : current.pathTo(task.pickupCity)) {
+				plan.appendMove(city);
+			}
+			cost += current.distanceTo(task.pickupCity);
+			plan.appendPickup(task);
+
+			// move: pickup location => delivery location
+			for (City city : task.path()) {
+				plan.appendMove(city);
+			}
+
+			plan.appendDelivery(task);
+			cost += task.pickupCity.distanceTo(task.deliveryCity);
+			// set current city
+			current = task.deliveryCity;
+		}
+		System.out.println(cost * vehicle.costPerKm());
+		return plan;
+	}
+
+	private List<Plan> slsPlans(List<Vehicle> vehicles, TaskSet tasks, int iterationsBound, double p, long startTime) {
+		Solution currentBestSolution = new Solution(vehicles, tasks);
+		currentBestSolution.createRandomInitialSolution();
 
 		Solution bestSoFar = currentBestSolution;
 
 		int iterationCount = 0;
 
-		 while (iterationCount < iterationsBound) {
+		while (iterationCount < iterationsBound && timeOut(startTime)) {
 			iterationCount++;
 			List<Solution> neighbors = currentBestSolution.generateNeighbourSolutions();
 			Solution oldBestSolution = currentBestSolution;
 			if (Math.random() <= p) {
 				Solution bestPlan = currentBestSolution != null ? currentBestSolution : neighbors.get(0);
 				double bestCost = bestPlan.computeCost();
-				//Find the solution with the best plan
+				// Find the solution with the best plan
 				for (Solution plan : neighbors) {
 					double cost = plan.computeCost();
 					if (cost <= bestCost) {
@@ -138,107 +127,32 @@ public class CentralizedTemplate implements CentralizedBehavior {
 				}
 				currentBestSolution = bestPlan;
 			} else {
-				//This should not happen but still
-				if(neighbors.size() > 0) {
+				// This should not happen
+				if (neighbors.size() > 0) {
 					Random random = new Random();
-					//System.out.println(neighbors.size());
 					int index = random.nextInt(neighbors.size());
 					currentBestSolution = neighbors.get(index);
-				} 
+				}
 			}
-			
-			
+
 			bestSoFar = currentBestSolution.computeCost() < bestSoFar.computeCost() ? currentBestSolution : bestSoFar;
 
 		}
-		
+
 		List<Plan> optimalVehiclePlans = new ArrayList<Plan>(vehicles.size());
 		for (Vehicle v : vehicles) {
-    		LinkedList<CentralizedAction> actions = bestSoFar.getActions().get(v);
-    		Plan plan = bestSoFar.buildPlanFromActionList(actions, v.getCurrentCity());
-    		optimalVehiclePlans.add(plan);
-    	}
-
-		System.out.println("TOTAL FINAL COST = " + bestSoFar.computeCost());
+			LinkedList<CentralizedAction> actions = bestSoFar.getActions().get(v);
+			Plan plan = bestSoFar.buildPlanFromActionList(actions, v.getCurrentCity());
+			optimalVehiclePlans.add(plan);
+		}
 		return optimalVehiclePlans;
 	}
-    
-    private List<Plan> slsPlans2(List<Vehicle> vehicles, TaskSet tasks, int iterationsBound, double p) {
-    	List<Plan> optimalVehiclePlans = new ArrayList<Plan>(vehicles.size());
-    	
-    	Solution currentBestSolution = new Solution(vehicles, tasks);
-    	currentBestSolution = currentBestSolution.createRandomInitialSolution();
-//    	currentBestSolution = currentBestSolution.createInitialSolution();
-    	double currentMinimalCost = Double.MAX_VALUE;
-    	int counter = 0;
-    	while(counter < iterationsBound) {
-        	Solution oldSolution = currentBestSolution.solutionDeepCopy();
-    		List<Solution> neighbourSolutions = currentBestSolution.generateNeighbourSolutions();
-    		for (Solution neighbour : neighbourSolutions) {
-    			HashMap<Vehicle, LinkedList<CentralizedAction>> solutionActions = neighbour.getActions();
-    			HashMap<Vehicle, Double> allCosts = computeCostsForAllVehicles(vehicles, solutionActions);
-    			double tempCost = 0.0;
-    			for (Vehicle v : vehicles) {
-    				tempCost += allCosts.get(v);
-    			}
-    			if (tempCost < currentMinimalCost) {
-    				currentBestSolution = neighbour;
-    				currentMinimalCost = tempCost;
-    			}
-    		}
-        	
-    		if (Math.random() <= p) {
-    			// with probability 1-p, we keep the old solution
-//    			currentBestSolution = oldSolution;
-    			Random rand = new Random();
-//    			if (neighbourSolutions.size() > 0) {
-//    				currentBestSolution = neighbourSolutions.get(rand.nextInt(neighbourSolutions.size()));
-//    			} else {
-    				currentBestSolution = oldSolution;
-//    			}
-    		}
-    		counter ++;
-    	}
 
-    	for (Vehicle v : vehicles) {
-    		LinkedList<CentralizedAction> actions = currentBestSolution.getActions().get(v);
-    		Plan plan = currentBestSolution.buildPlanFromActionList(actions, v.getCurrentCity());
-    		optimalVehiclePlans.add(plan);
-    	}
-//    	System.out.println("TOTAL FINAL COST = " + currentMinimalCost);
-    	return optimalVehiclePlans;
-    }
-    
-	// Compute all vehicles' plans' costs and return as hashmap
-    private HashMap<Vehicle, Double> computeCostsForAllVehicles(List<Vehicle> vehicles, HashMap<Vehicle, LinkedList<CentralizedAction>> allActions) {
-    	HashMap<Vehicle, Double> allCosts = new HashMap<Vehicle, Double>();
-    	
-    	for (Vehicle v : vehicles) {
-    		List<CentralizedAction> vehicleActions = allActions.get(v);
-    		double vehicleCost = computeCostForVehicle(v, vehicleActions);
-    		allCosts.put(v, vehicleCost);
-    	}
-    	
-    	return allCosts;
-    }
-    
-    // Given a vehicle and it's planned actions, compute total cost
-    private double computeCostForVehicle(Vehicle v, List<CentralizedAction> actions) {
-    	double cost = 0.0;
-    	City currentLocation = v.getCurrentCity();
-    	
-    	for (CentralizedAction a : actions) {
-    		City pickupCity = a.getCurrentTask().pickupCity;
-    		City deliveryCity = a.getCurrentTask().deliveryCity;
-    		if (a.getType() == actionType.PICKUP) {
-    			cost += currentLocation.distanceTo(pickupCity) * v.costPerKm();
-    			currentLocation = pickupCity;
-    		} else if (a.getType() == actionType.DELIVER) {
-    			cost += currentLocation.distanceTo(deliveryCity) * v.costPerKm();
-    			currentLocation = deliveryCity;
-    		}
-    	}
-    	
-    	return cost;
-    }
+	private boolean timeOut(long startTime) {
+		long currentTime = System.currentTimeMillis();
+		long duration = currentTime - startTime;
+		//Half of a second to build a plan
+		return duration < timeout_plan - 500;
+	}
+
 }

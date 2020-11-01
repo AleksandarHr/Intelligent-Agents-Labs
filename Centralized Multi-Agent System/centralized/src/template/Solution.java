@@ -77,6 +77,10 @@ public class Solution {
 		
 		Random rand = new Random();
 		Vehicle randVehicle = this.vehicles.get(rand.nextInt(this.vehicles.size()));
+		while (this.actions.get(randVehicle).size() == 0) {
+			int idx = rand.nextInt(this.vehicles.size());
+			randVehicle = this.vehicles.get(idx);			
+		}
 		neighbours = changeFirstTaskAgent(randVehicle);
 		for (int i = 0; i < this.actions.get(randVehicle).size(); i ++ ) {
 			if (this.actions.get(randVehicle).get(i).getType() == actionType.PICKUP) {
@@ -355,6 +359,34 @@ public class Solution {
 			}
 		}
 		return biggestVehicle;
+	}
+	
+	public double computeCost() {
+		int finalCost = 0;
+		for (Vehicle vehicle : vehicles) {
+			List<CentralizedAction> list_actions = actions.get(vehicle);
+			double cost = 0;
+			City currentCity = vehicle.getCurrentCity();
+
+			for (CentralizedAction action : list_actions) {
+				City nextCity = null;
+				if (action.getType() == actionType.PICKUP) {
+					nextCity = action.getCurrentTask().pickupCity;
+				} else {
+					nextCity = action.getCurrentTask().deliveryCity;
+				}
+
+				double distance = currentCity.distanceTo(nextCity);
+				currentCity = nextCity;
+
+				cost += distance * vehicle.costPerKm();
+			}
+			
+			finalCost += cost;
+			
+		}
+
+		return finalCost;
 	}
 	
 	// GETTERS & SETTERS

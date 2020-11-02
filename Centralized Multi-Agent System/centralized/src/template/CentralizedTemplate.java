@@ -87,7 +87,7 @@ public class CentralizedTemplate implements CentralizedBehavior {
         
         int iterationsBound = 10000;
         double p = 0.3;
-        plans = slsPlans(vehicles, tasks, iterationsBound, p, pickRandom);
+        plans = slsPlans(vehicles, tasks, iterationsBound, p, time_start, pickRandom);
         double cost = 0.0;
         for (int i = 0; i < plans.size(); i++) {
         	cost += plans.get(i).totalDistance() * vehicles.get(i).costPerKm();
@@ -125,16 +125,15 @@ public class CentralizedTemplate implements CentralizedBehavior {
     }
     
     // Stochastic Local Search
-    private List<Plan> slsPlans(List<Vehicle> vehicles, TaskSet tasks, int iterationsBound, double p, boolean pickRandom){
-    	Solution currentBestSolution = new Solution(vehicles, tasks);
-    	currentBestSolution.createRandomInitialSolution();
+	private List<Plan> slsPlans(List<Vehicle> vehicles, TaskSet tasks, int iterationsBound, double p, long startTime, boolean pickRandom) {
+		Solution currentBestSolution = new Solution(vehicles, tasks);
+		currentBestSolution.createRandomInitialSolution();
 
 		Solution bestSoFar = currentBestSolution;
 
 		int iterationCount = 0;
-		
-		// iterate until we reach iterationsBound
-		while (iterationCount < iterationsBound) {
+		// iterate until we reach iterationsBound or we timeout
+		while (iterationCount < iterationsBound && timeOut(startTime)) {
 			iterationCount++;
 			// generate neigbhours of current best solution
 			List<Solution> neighbors = currentBestSolution.generateNeighbourSolutions();
@@ -143,7 +142,7 @@ public class CentralizedTemplate implements CentralizedBehavior {
 				// with probability p, proceed with the best neighbor solution
 				Solution bestPlan = currentBestSolution != null ? currentBestSolution : neighbors.get(0);
 				double bestCost = bestPlan.computeCost();
-				//Find the solution with the best plan
+				// Find the solution with the best plan
 				for (Solution plan : neighbors) {
 					double cost = plan.computeCost();
 					if (cost <= bestCost) {
@@ -165,19 +164,24 @@ public class CentralizedTemplate implements CentralizedBehavior {
 					}
 				} 
 			}
-					
+
 			bestSoFar = currentBestSolution.computeCost() < bestSoFar.computeCost() ? currentBestSolution : bestSoFar;
 		}
 		
 		// Build logist plan for every vehicle from the actions in the best solution found
 		List<Plan> optimalVehiclePlans = new ArrayList<Plan>(vehicles.size());
 		for (Vehicle v : vehicles) {
-    		LinkedList<CentralizedAction> actions = bestSoFar.getActions().get(v);
-    		Plan plan = bestSoFar.buildPlanFromActionList(actions, v.getCurrentCity());
-    		optimalVehiclePlans.add(plan);
-    	}
-
-		System.out.println("TOTAL FINAL COST = " + bestSoFar.computeCost());
+			LinkedList<CentralizedAction> actions = bestSoFar.getActions().get(v);
+			Plan plan = bestSoFar.buildPlanFromActionList(actions, v.getCurrentCity());
+			optimalVehiclePlans.add(plan);
+		}
 		return optimalVehiclePlans;
+	}
+
+	private boolean timeOut(long startTime) {
+		long currentTime = System.currentTimeMillis();
+		long duration = currentTime - startTime;
+		//Half of a second to build a plan
+		return duration < timeout_plan - 500;
 	}
 }

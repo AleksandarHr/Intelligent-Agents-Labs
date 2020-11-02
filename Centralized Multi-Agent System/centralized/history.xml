@@ -44,19 +44,29 @@
 				<task id="29" pickup="Aarau" delivery="Bern" weight="3" reward="85727"/>
 			</tasks>
 			<events>
-				<event id="0" time="0" vehicle="Vehicle 2" move="Aarau"/>
-				<event id="1" time="1222222164" vehicle="Vehicle 2" pickup="3"/>
-				<event id="2" time="1522222148" vehicle="Vehicle 2" move="Z?rich"/>
+				<event id="0" time="0" vehicle="Vehicle 3" pickup="21"/>
+				<event id="1" time="299999995" vehicle="Vehicle 3" pickup="16"/>
+				<event id="2" time="599999977" vehicle="Vehicle 3" move="Z?rich"/>
+				<event id="3" time="1933333239" vehicle="Vehicle 3" pickup="20"/>
+				<event id="4" time="2233333223" vehicle="Vehicle 3" move="Aarau"/>
+				<event id="5" time="2899999855" vehicle="Vehicle 3" pickup="14"/>
+				<event id="6" time="3199999843" vehicle="Vehicle 3" pickup="3"/>
+				<event id="7" time="3499999829" vehicle="Vehicle 3" pickup="29"/>
+				<event id="8" time="3799999813" vehicle="Vehicle 3" move="Z?rich"/>
+				<event id="9" time="4466666443" vehicle="Vehicle 3" move="St-Gallen"/>
+				<event id="10" time="5799999703" vehicle="Vehicle 3" pickup="8"/>
+				<event id="11" time="6099999689" vehicle="Vehicle 3" pickup="4"/>
+				<event id="12" time="6399999672" vehicle="Vehicle 3" move="Z?rich"/>
 			</events>
 		</round>
 	</rounds>
 	<statistics>
 		<stat rank="1" agent="centralized-random">
 			<total-tasks value="30"/>
-			<total-distance value="170.0"/>
-			<total-cost value="850"/>
+			<total-distance value="480.0"/>
+			<total-cost value="2400"/>
 			<total-reward value="0"/>
-			<total-profit value="-850"/>
+			<total-profit value="-2400"/>
 		</stat>
 	</statistics>
 </history>

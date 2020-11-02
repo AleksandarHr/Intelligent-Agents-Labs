@@ -13,7 +13,7 @@ import logist.simulation.Vehicle;
 import logist.task.Task;
 import logist.task.TaskSet;
 import logist.topology.Topology.City;
-import template.CentralizedAction.actionType;
+import template.CentralizedAction.ActionType;
 
 public class Solution {
 	
@@ -32,6 +32,7 @@ public class Solution {
 		this.tasks = tasks.clone();
 	}
 	
+	// Initial solution which assigns every task to a large enough random vehicle
 	public Solution createRandomInitialSolution() {
 		for (Task t : this.tasks) {
 			Random rand = new Random();
@@ -40,8 +41,8 @@ public class Solution {
 				randomVehicle = this.vehicles.get(rand.nextInt(this.vehicles.size()));
 			}
 			LinkedList<CentralizedAction> actionsSoFar = this.actions.get(randomVehicle);
-			actionsSoFar.add(new CentralizedAction(t, actionType.PICKUP));
-			actionsSoFar.add(new CentralizedAction(t, actionType.DELIVER));
+			actionsSoFar.add(new CentralizedAction(t, ActionType.PICKUP));
+			actionsSoFar.add(new CentralizedAction(t, ActionType.DELIVER));
 			this.actions.put(randomVehicle, actionsSoFar);
 		}
 		
@@ -53,6 +54,28 @@ public class Solution {
 		}
 		initialSolution.setPlans(this.plans);
 		return initialSolution;
+	}
+
+	// Generate neighbour solutions to the current solution - pick a random vehicle
+	//		and perform the strategies on it (swap first task, pickup/delivery actions shift)
+	public List<Solution> generateNeighbourSolutions() {
+		List<Solution> neighbours = new LinkedList<Solution>();
+		
+		Random rand = new Random();
+		Vehicle randVehicle = this.vehicles.get(rand.nextInt(this.vehicles.size()));
+		while (this.actions.get(randVehicle).size() == 0) {
+			int idx = rand.nextInt(this.vehicles.size());
+			randVehicle = this.vehicles.get(idx);			
+		}
+		neighbours = changeFirstTaskAgent(randVehicle);
+		for (int i = 0; i < this.actions.get(randVehicle).size(); i ++ ) {
+			if (this.actions.get(randVehicle).get(i).getType() == ActionType.PICKUP) {
+				neighbours.addAll(shiftPickupAction(randVehicle, i));
+			} else if (this.actions.get(randVehicle).get(i).getType() == ActionType.DELIVER) {
+				neighbours.addAll(shiftDeliverAction(randVehicle, i));
+			}
+		}
+		return neighbours;
 	}
 	
 	// Initial solution assigns all tasks to the biggest vehicle available
@@ -72,33 +95,14 @@ public class Solution {
 		return initialSolution;
 	}
 	
-	public List<Solution> generateNeighbourSolutions() {
-		List<Solution> neighbours = new LinkedList<Solution>();
-		
-		Random rand = new Random();
-		Vehicle randVehicle = this.vehicles.get(rand.nextInt(this.vehicles.size()));
-		while (this.actions.get(randVehicle).size() == 0) {
-			int idx = rand.nextInt(this.vehicles.size());
-			randVehicle = this.vehicles.get(idx);			
-		}
-		neighbours = changeFirstTaskAgent(randVehicle);
-		for (int i = 0; i < this.actions.get(randVehicle).size(); i ++ ) {
-			if (this.actions.get(randVehicle).get(i).getType() == actionType.PICKUP) {
-				neighbours.addAll(shiftPickupAction(randVehicle, i));
-			} else if (this.actions.get(randVehicle).get(i).getType() == actionType.DELIVER) {
-				neighbours.addAll(shiftDeliverAction(randVehicle, i));
-			}
-		}
-		return neighbours;
-	}
-	
+	// Build initial solution by giving all tasks to the largest vehicle
 	private Solution buildInitialPlan(Vehicle biggestVehicle) {
 		Solution initialSolution = new Solution(this.vehicles, this.tasks);
 		
 		LinkedList<CentralizedAction> vehicleActions = new LinkedList<CentralizedAction>();
 		for (Task t : initialSolution.tasks) {
-			CentralizedAction pickupAction = new CentralizedAction(t, actionType.PICKUP);
-			CentralizedAction deliverAction = new CentralizedAction(t, actionType.DELIVER);
+			CentralizedAction pickupAction = new CentralizedAction(t, ActionType.PICKUP);
+			CentralizedAction deliverAction = new CentralizedAction(t, ActionType.DELIVER);
 			vehicleActions.add(pickupAction);
 			vehicleActions.add(deliverAction);
 		}
@@ -147,8 +151,8 @@ public class Solution {
 					HashMap<Vehicle, LinkedList<CentralizedAction>> newSolutionActions = mapDeepCopy(this.actions);
 					LinkedList<CentralizedAction> newActions = new LinkedList<CentralizedAction>(newSolutionActions.get(to));
 					// add pickup & delivery of the new task at the beginning of the vehicle's actions
-					newActions.addFirst(new CentralizedAction(taskToChange, actionType.DELIVER));
-					newActions.addFirst(new CentralizedAction(taskToChange, actionType.PICKUP));
+					newActions.addFirst(new CentralizedAction(taskToChange, ActionType.DELIVER));
+					newActions.addFirst(new CentralizedAction(taskToChange, ActionType.PICKUP));
 					newSolutionActions.put(to, newActions);			
 					newSolutionActions.put(from, vehicleActions);
 					
@@ -181,7 +185,9 @@ public class Solution {
 				// stop moving pickup action to the right if we reached the delivery action for the same task
 				break;
 			}
+			// update actions list
 			LinkedList<CentralizedAction> newSolutionActions = moveActionFromTo(oldActions, actionSequenceNumber, moveForwardTo);
+			// make sure capacity constraint is not violated
 			if (isCapacityEnough(v, newSolutionActions)) {
 				HashMap<Vehicle, LinkedList<CentralizedAction>> allActions = mapDeepCopy(this.actions);
 				allActions.put(v, newSolutionActions);
@@ -195,8 +201,9 @@ public class Solution {
 		// shift pickup action to the left
 		int moveBackwardsTo = actionSequenceNumber - 1;
 		while (moveBackwardsTo >= 0) {
-			// TODO: Improve efficiency - do not recompute the remaining capacity from scratch every time!!!
+			// update actions list
 			LinkedList<CentralizedAction> newSolutionActions = moveActionFromTo(oldActions, actionSequenceNumber, moveBackwardsTo);
+			// make sure capacity constraint is not violated
 			if (isCapacityEnough(v, newSolutionActions)) {
 				HashMap<Vehicle, LinkedList<CentralizedAction>> allActions = mapDeepCopy(this.actions);
 				allActions.put(v, newSolutionActions);
@@ -223,7 +230,9 @@ public class Solution {
 		// shift pickup action to the right
 		int moveForwardTo = actionSequenceNumber + 1;	
 		while (moveForwardTo < oldActions.size()) {
+			// update list of actions
 			LinkedList<CentralizedAction> newSolutionActions = moveActionFromTo(oldActions, actionSequenceNumber, moveForwardTo);
+			// make sure capacity constraint is not violated
 			if (isCapacityEnough(v, newSolutionActions)) {
 				HashMap<Vehicle, LinkedList<CentralizedAction>> allActions = mapDeepCopy(this.actions);
 				allActions.put(v, newSolutionActions);
@@ -237,13 +246,13 @@ public class Solution {
 		// shift pickup action to the left
 		int moveBackwardsTo = actionSequenceNumber - 1;
 		while (moveBackwardsTo >= 0) {
-			// TODO: Make sure we are computing capacity correctly!!!
-			// TODO: Improve efficiency - do not recompute the remaining capacity from scratch every time!!!
 			if (oldActions.get(moveBackwardsTo).getCurrentTask().equals(taskToMove.getCurrentTask())) {
 				// stop moving deliver action to the left if we reached the pickup action for the same task
 				break;
 			}
+			// update the actions list
 			LinkedList<CentralizedAction> newSolutionActions = moveActionFromTo(oldActions, actionSequenceNumber, moveBackwardsTo);
+			// make sure capacity constraint is not violated
 			if (isCapacityEnough(v, newSolutionActions)) {
 				HashMap<Vehicle, LinkedList<CentralizedAction>> allActions = mapDeepCopy(this.actions);
 				allActions.put(v, newSolutionActions);
@@ -259,6 +268,8 @@ public class Solution {
 	}
 	
 	// HELPERS
+	
+	// Given a list of actions, move action at sequence number "from" to sequence number "to" 
 	private LinkedList<CentralizedAction> moveActionFromTo(List<CentralizedAction> actions, int from, int to) {
 		LinkedList<CentralizedAction> updatedActions = new LinkedList<CentralizedAction>(actions);
 		
@@ -273,9 +284,9 @@ public class Solution {
 	private boolean isCapacityEnough(Vehicle v, List<CentralizedAction> vehicleActions) {
 		int runningLoad = 0;
 		for (CentralizedAction a : vehicleActions) {
-			if (a.getType() == actionType.PICKUP) {
+			if (a.getType() == ActionType.PICKUP) {
 				runningLoad += a.getCurrentTask().weight;
-			} else if (a.getType() == actionType.DELIVER) {
+			} else if (a.getType() == ActionType.DELIVER) {
 				runningLoad -= a.getCurrentTask().weight;
 			}
 			if (runningLoad > v.capacity()) {
@@ -294,9 +305,9 @@ public class Solution {
 			if (runningSequenceNumber == actionSequenceNumber) {
 				return remainingCapacity;
 			}
-			if (a.getType() == actionType.PICKUP) {
+			if (a.getType() == ActionType.PICKUP) {
 				remainingCapacity -= a.getCurrentTask().weight;
-			} else if (a.getType() == actionType.DELIVER) {
+			} else if (a.getType() == ActionType.DELIVER) {
 				remainingCapacity += a.getCurrentTask().weight;
 			}
 			runningSequenceNumber ++;
@@ -311,17 +322,23 @@ public class Solution {
 		Plan p = new Plan(initialCity);
 		for (CentralizedAction a : actions) {
 			Task t = a.getCurrentTask();
-			if (a.getType() == actionType.PICKUP) {
+			if (a.getType() == ActionType.PICKUP) {
+				// For every pickup action, append move actions to the pickup city
 				for (City c : currentLocation.pathTo(t.pickupCity)) {
 					p.appendMove(c);
 				}
+				// update current location
 				currentLocation = t.pickupCity;
+				// append pickup action
 				p.appendPickup(a.getCurrentTask());
-			} else if (a.getType() == actionType.DELIVER) {
+			} else if (a.getType() == ActionType.DELIVER) {
+				// For every deliver action, append move actions to the deliver city
 				for (City c : currentLocation.pathTo(t.deliveryCity)) {
 					p.appendMove(c);
 				}
+				// update current location
 				currentLocation = t.deliveryCity;
+				// append deliver action
 				p.appendDelivery(t);
 			}
 		}
@@ -339,7 +356,7 @@ public class Solution {
 		return copy;
 	}
 	
-	
+	// Perform deep copy of the current solution
 	public Solution solutionDeepCopy() {
 		Solution copy = new Solution(this.vehicles, this.tasks.clone());
 		copy.setActions(this.mapDeepCopy(this.actions));
@@ -351,6 +368,7 @@ public class Solution {
 		return copy;
 	}
 	
+	// Given list of vehicles, find the one with largest capacity
 	private Vehicle findBiggestVehicle(List<Vehicle> vehicles) {
 		Vehicle biggestVehicle = vehicles.get(0);
 		for (Vehicle v : this.vehicles) {
@@ -361,32 +379,32 @@ public class Solution {
 		return biggestVehicle;
 	}
 	
+	// Compute total cost for all vehicles' plans
 	public double computeCost() {
 		int finalCost = 0;
-		for (Vehicle vehicle : vehicles) {
-			List<CentralizedAction> list_actions = actions.get(vehicle);
-			double cost = 0;
-			City currentCity = vehicle.getCurrentCity();
-
-			for (CentralizedAction action : list_actions) {
-				City nextCity = null;
-				if (action.getType() == actionType.PICKUP) {
-					nextCity = action.getCurrentTask().pickupCity;
-				} else {
-					nextCity = action.getCurrentTask().deliveryCity;
-				}
-
-				double distance = currentCity.distanceTo(nextCity);
-				currentCity = nextCity;
-
-				cost += distance * vehicle.costPerKm();
-			}
-			
-			finalCost += cost;
-			
+		for (Vehicle vehicle : this.vehicles) {
+			List<CentralizedAction> vehicleActions = this.actions.get(vehicle);
+			finalCost += computeCostForVehicle(vehicleActions, vehicle.getCurrentCity(), vehicle.costPerKm());
 		}
-
 		return finalCost;
+	}
+	
+	// Compute cost for a given vehicle's plan
+	private double computeCostForVehicle(List<CentralizedAction> vehicleActions, City initialCity, int costPerKm) {
+		double cost = 0;
+		City currentCity = initialCity;
+		for (CentralizedAction action : vehicleActions) {
+			City nextCity = null;
+			if (action.getType() == ActionType.PICKUP) {
+				nextCity = action.getCurrentTask().pickupCity;
+			} else {
+				nextCity = action.getCurrentTask().deliveryCity;
+			}
+			double distance = currentCity.distanceTo(nextCity);
+			currentCity = nextCity;
+			cost += distance * costPerKm;
+		}
+		return cost;
 	}
 	
 	// GETTERS & SETTERS

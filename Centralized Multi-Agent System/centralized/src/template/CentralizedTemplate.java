@@ -22,7 +22,7 @@ import logist.task.TaskDistribution;
 import logist.task.TaskSet;
 import logist.topology.Topology;
 import logist.topology.Topology.City;
-import template.CentralizedAction.actionType;
+import template.CentralizedAction.ActionType;
 
 /**
  * A very simple auction agent that assigns all tasks to its first vehicle and
@@ -37,7 +37,13 @@ public class CentralizedTemplate implements CentralizedBehavior {
     private Agent agent;
     private long timeout_setup;
     private long timeout_plan;
-    
+	
+    enum AlgorithmType{
+		NAIVE,
+		SLS,
+		SLSRANDOM
+	}
+
     @Override
     public void setup(Topology topology, TaskDistribution distribution,
             Agent agent) {
@@ -64,19 +70,24 @@ public class CentralizedTemplate implements CentralizedBehavior {
     @Override
     public List<Plan> plan(List<Vehicle> vehicles, TaskSet tasks) {
         long time_start = System.currentTimeMillis();
-        
-//		System.out.println("Agent " + agent.id() + " has tasks " + tasks);
-//        Plan planVehicle1 = naivePlan(vehicles.get(0), tasks);
-//
-//        List<Plan> plans = new ArrayList<Plan>();
-//        plans.add(planVehicle1);
-//        while (plans.size() < vehicles.size()) {
-//            plans.add(Plan.EMPTY);
-//        }
+        AlgorithmType alg = AlgorithmType.SLSRANDOM;
+        List<Plan> plans = new ArrayList<Plan>();
+        boolean pickRandom = false;
+
+        if (alg == AlgorithmType.NAIVE) {
+        	Plan planVehicle1 = naivePlan(vehicles.get(0), tasks);
+        	plans.add(planVehicle1);
+        	while (plans.size() < vehicles.size()) {
+            	plans.add(Plan.EMPTY);
+        	}
+        	return plans;
+        } else if (alg == AlgorithmType.SLSRANDOM) {
+        	pickRandom = true;
+        }
         
         int iterationsBound = 10000;
         double p = 0.3;
-        List<Plan> plans = slsPlans(vehicles, tasks, iterationsBound, p);
+        plans = slsPlans(vehicles, tasks, iterationsBound, p, pickRandom);
         double cost = 0.0;
         for (int i = 0; i < plans.size(); i++) {
         	cost += plans.get(i).totalDistance() * vehicles.get(i).costPerKm();
@@ -113,19 +124,23 @@ public class CentralizedTemplate implements CentralizedBehavior {
         return plan;
     }
     
-    private List<Plan> slsPlans(List<Vehicle> vehicles, TaskSet tasks, int iterationsBound, double p){
+    // Stochastic Local Search
+    private List<Plan> slsPlans(List<Vehicle> vehicles, TaskSet tasks, int iterationsBound, double p, boolean pickRandom){
     	Solution currentBestSolution = new Solution(vehicles, tasks);
     	currentBestSolution.createRandomInitialSolution();
 
 		Solution bestSoFar = currentBestSolution;
 
 		int iterationCount = 0;
-
-		 while (iterationCount < iterationsBound) {
+		
+		// iterate until we reach iterationsBound
+		while (iterationCount < iterationsBound) {
 			iterationCount++;
+			// generate neigbhours of current best solution
 			List<Solution> neighbors = currentBestSolution.generateNeighbourSolutions();
-			Solution oldBestSolution = currentBestSolution;
+			Solution previousBestSolution = currentBestSolution;
 			if (Math.random() <= p) {
+				// with probability p, proceed with the best neighbor solution
 				Solution bestPlan = currentBestSolution != null ? currentBestSolution : neighbors.get(0);
 				double bestCost = bestPlan.computeCost();
 				//Find the solution with the best plan
@@ -138,20 +153,23 @@ public class CentralizedTemplate implements CentralizedBehavior {
 				}
 				currentBestSolution = bestPlan;
 			} else {
-				//This should not happen but still
+				// with probability (1-p) either revert back to the previous best solution
+				//		or pick a random neighbour (depending on boolean argument)
 				if(neighbors.size() > 0) {
-					Random random = new Random();
-					//System.out.println(neighbors.size());
-					int index = random.nextInt(neighbors.size());
-					currentBestSolution = neighbors.get(index);
+					if (pickRandom) {
+						Random random = new Random();
+						int index = random.nextInt(neighbors.size());
+						currentBestSolution = neighbors.get(index);
+					} else {
+						currentBestSolution = previousBestSolution;
+					}
 				} 
 			}
-			
-			
+					
 			bestSoFar = currentBestSolution.computeCost() < bestSoFar.computeCost() ? currentBestSolution : bestSoFar;
-
 		}
 		
+		// Build logist plan for every vehicle from the actions in the best solution found
 		List<Plan> optimalVehiclePlans = new ArrayList<Plan>(vehicles.size());
 		for (Vehicle v : vehicles) {
     		LinkedList<CentralizedAction> actions = bestSoFar.getActions().get(v);
@@ -162,83 +180,4 @@ public class CentralizedTemplate implements CentralizedBehavior {
 		System.out.println("TOTAL FINAL COST = " + bestSoFar.computeCost());
 		return optimalVehiclePlans;
 	}
-    
-    private List<Plan> slsPlans2(List<Vehicle> vehicles, TaskSet tasks, int iterationsBound, double p) {
-    	List<Plan> optimalVehiclePlans = new ArrayList<Plan>(vehicles.size());
-    	
-    	Solution currentBestSolution = new Solution(vehicles, tasks);
-    	currentBestSolution = currentBestSolution.createRandomInitialSolution();
-//    	currentBestSolution = currentBestSolution.createInitialSolution();
-    	double currentMinimalCost = Double.MAX_VALUE;
-    	int counter = 0;
-    	while(counter < iterationsBound) {
-        	Solution oldSolution = currentBestSolution.solutionDeepCopy();
-    		List<Solution> neighbourSolutions = currentBestSolution.generateNeighbourSolutions();
-    		for (Solution neighbour : neighbourSolutions) {
-    			HashMap<Vehicle, LinkedList<CentralizedAction>> solutionActions = neighbour.getActions();
-    			HashMap<Vehicle, Double> allCosts = computeCostsForAllVehicles(vehicles, solutionActions);
-    			double tempCost = 0.0;
-    			for (Vehicle v : vehicles) {
-    				tempCost += allCosts.get(v);
-    			}
-    			if (tempCost < currentMinimalCost) {
-    				currentBestSolution = neighbour;
-    				currentMinimalCost = tempCost;
-    			}
-    		}
-        	
-    		if (Math.random() <= p) {
-    			// with probability 1-p, we keep the old solution
-//    			currentBestSolution = oldSolution;
-    			Random rand = new Random();
-//    			if (neighbourSolutions.size() > 0) {
-//    				currentBestSolution = neighbourSolutions.get(rand.nextInt(neighbourSolutions.size()));
-//    			} else {
-    				currentBestSolution = oldSolution;
-//    			}
-    		}
-    		counter ++;
-    	}
-
-    	for (Vehicle v : vehicles) {
-    		LinkedList<CentralizedAction> actions = currentBestSolution.getActions().get(v);
-    		Plan plan = currentBestSolution.buildPlanFromActionList(actions, v.getCurrentCity());
-    		optimalVehiclePlans.add(plan);
-    	}
-//    	System.out.println("TOTAL FINAL COST = " + currentMinimalCost);
-    	return optimalVehiclePlans;
-    }
-    
-	// Compute all vehicles' plans' costs and return as hashmap
-    private HashMap<Vehicle, Double> computeCostsForAllVehicles(List<Vehicle> vehicles, HashMap<Vehicle, LinkedList<CentralizedAction>> allActions) {
-    	HashMap<Vehicle, Double> allCosts = new HashMap<Vehicle, Double>();
-    	
-    	for (Vehicle v : vehicles) {
-    		List<CentralizedAction> vehicleActions = allActions.get(v);
-    		double vehicleCost = computeCostForVehicle(v, vehicleActions);
-    		allCosts.put(v, vehicleCost);
-    	}
-    	
-    	return allCosts;
-    }
-    
-    // Given a vehicle and it's planned actions, compute total cost
-    private double computeCostForVehicle(Vehicle v, List<CentralizedAction> actions) {
-    	double cost = 0.0;
-    	City currentLocation = v.getCurrentCity();
-    	
-    	for (CentralizedAction a : actions) {
-    		City pickupCity = a.getCurrentTask().pickupCity;
-    		City deliveryCity = a.getCurrentTask().deliveryCity;
-    		if (a.getType() == actionType.PICKUP) {
-    			cost += currentLocation.distanceTo(pickupCity) * v.costPerKm();
-    			currentLocation = pickupCity;
-    		} else if (a.getType() == actionType.DELIVER) {
-    			cost += currentLocation.distanceTo(deliveryCity) * v.costPerKm();
-    			currentLocation = deliveryCity;
-    		}
-    	}
-    	
-    	return cost;
-    }
 }

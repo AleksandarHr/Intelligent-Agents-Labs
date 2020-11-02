@@ -7,19 +7,19 @@ public class CentralizedAction {
 	
 	City currentCity;
 	Task currentTask;
-	actionType type;
+	ActionType type;
 	
-	enum actionType{
+	enum ActionType{
 		PICKUP,
 		DELIVER
 	}
 
-	public CentralizedAction(Task currentTask, actionType type) {
+	public CentralizedAction(Task currentTask, ActionType type) {
 		this.currentTask = currentTask;
 		this.type = type;
-		if (type == actionType.PICKUP) {
+		if (type == ActionType.PICKUP) {
 			this.currentCity = currentTask.pickupCity;
-		} else if (type == actionType.DELIVER) {
+		} else if (type == ActionType.DELIVER) {
 			this.currentCity = currentTask.deliveryCity;
 		}
 	}
@@ -40,11 +40,11 @@ public class CentralizedAction {
 		this.currentTask = currentTask;
 	}
 
-	public actionType getType() {
+	public ActionType getType() {
 		return type;
 	}
 
-	public void setType(actionType type) {
+	public void setType(ActionType type) {
 		this.type = type;
 	}
 

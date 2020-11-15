@@ -22,6 +22,16 @@ public class Solution {
 	private HashMap<Vehicle, LinkedList<DecentralizedAction>> actions;
 	private TaskSet tasks;
 	
+	// A solution constructor for the Decentralized MAS
+	public Solution(List<Vehicle> vehicles) {
+		this.plans = new HashMap<Vehicle, Plan>();	
+		this.actions = new HashMap<Vehicle, LinkedList<DecentralizedAction>>();
+		for (Vehicle v : vehicles) {
+			this.actions.put(v, new LinkedList<DecentralizedAction>());
+		}
+		this.vehicles = vehicles;
+	}
+	
 	public Solution(List<Vehicle> vehicles, TaskSet tasks) {
 		this.plans = new HashMap<Vehicle, Plan>();	
 		this.actions = new HashMap<Vehicle, LinkedList<DecentralizedAction>>();
@@ -30,6 +40,19 @@ public class Solution {
 		}
 		this.vehicles = vehicles;
 		this.tasks = tasks.clone();
+	}
+	
+	// Extends current solution by including the new task
+	public Solution extend(Task newTask) {
+		Solution copy = this.solutionDeepCopy();
+		
+		if (newTask != null) {
+			// TODO: add new task
+			City pickupcity = newTask.pickupCity;
+			City deliveryCity = newTask.deliveryCity;
+		}
+		
+		return copy;
 	}
 	
 	// Initial solution which assigns every task to a large enough random vehicle
@@ -80,7 +103,7 @@ public class Solution {
 	
 	// Initial solution assigns all tasks to the biggest vehicle available
 	public Solution createInitialSolution() {
-		Vehicle biggestVehicle = findBiggestVehicle(this.vehicles);
+		Vehicle biggestVehicle = Utils.findBiggestVehicle(this.vehicles);
 		
 		// If there is a task which exceeds the capacity of the biggest vehicle
 		// then there is no solution
@@ -296,26 +319,7 @@ public class Solution {
 		
 		return true;
 	}
-	
-	// Compute the remaining capacity of a vehicle right before performing action with given sequence number
-	private int computeRemainingCapacityAtAction(Vehicle v, List<DecentralizedAction> vehicleActions, int actionSequenceNumber) {
-		int remainingCapacity = v.capacity();
-		int runningSequenceNumber = 0;
-		for (DecentralizedAction a : vehicleActions) {
-			if (runningSequenceNumber == actionSequenceNumber) {
-				return remainingCapacity;
-			}
-			if (a.getType() == ActionType.PICKUP) {
-				remainingCapacity -= a.getCurrentTask().weight;
-			} else if (a.getType() == ActionType.DELIVER) {
-				remainingCapacity += a.getCurrentTask().weight;
-			}
-			runningSequenceNumber ++;
-		}
 		
-		return remainingCapacity;
-	}
-	
 	// Given a list of DecentralizedAction objects build the corresponding logist plan
 	public Plan buildPlanFromActionList(LinkedList<DecentralizedAction> actions, City initialCity) {
 		City currentLocation = initialCity;
@@ -366,17 +370,6 @@ public class Solution {
 		}
 		copy.setPlans(plansCopy);
 		return copy;
-	}
-	
-	// Given list of vehicles, find the one with largest capacity
-	private Vehicle findBiggestVehicle(List<Vehicle> vehicles) {
-		Vehicle biggestVehicle = vehicles.get(0);
-		for (Vehicle v : this.vehicles) {
-			if (biggestVehicle == null || biggestVehicle.capacity() < v.capacity()) {
-				biggestVehicle = v;
-			}
-		}
-		return biggestVehicle;
 	}
 	
 	// Compute total cost for all vehicles' plans

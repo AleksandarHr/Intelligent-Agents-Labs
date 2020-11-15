@@ -1,13 +1,17 @@
 package template;
 
+import java.io.File;
 //the list of imports
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Random;
 
+import logist.LogistSettings;
 import logist.Measures;
 import logist.behavior.AuctionBehavior;
+import logist.config.Parsers;
 import logist.agent.Agent;
 import logist.simulation.Vehicle;
 import logist.plan.Plan;
@@ -16,6 +20,8 @@ import logist.task.TaskDistribution;
 import logist.task.TaskSet;
 import logist.topology.Topology;
 import logist.topology.Topology.City;
+
+import template.Utils;
 
 /**
  * A very smart auction agent that beats everyone else.
@@ -30,16 +36,46 @@ public class AuctionSmart implements AuctionBehavior {
 	private Random random;
 	private Vehicle vehicle;
 	private City currentCity;
-
+	private TaskSet tasksSoFar;
+	
+	private Solution currentSolution, newSolution;
+	private HashMap<Integer, List<Long>> agentsBidsHistory;
+	private ArrayList<Integer> winCounts;
+	
+	private long setupTimeout, planTimeout, bidTimeout;
+	
+	private double increaseRate = 0.05;
+	int iterationsBound = 10000;
+	double p = 0.5;
+	long startTime;
+	boolean pickRandom = true;
+	
 	@Override
 	public void setup(Topology topology, TaskDistribution distribution, Agent agent) {
 
+		this.agentsBidsHistory = new HashMap<Integer, List<Long>>();
+		this.winCounts = new ArrayList<Integer>();
+		
 		this.topology = topology;
 		this.distribution = distribution;
 		this.agent = agent;
 		this.vehicle = agent.vehicles().get(0);
 		this.currentCity = vehicle.homeCity();
 
+		// Read in timeouts for setup, plan, and bid
+        LogistSettings ls = null;
+        try {
+            ls = Parsers.parseSettings("config" + File.separator + "settings_auction.xml");
+            this.setupTimeout = ls.get(LogistSettings.TimeoutKey.SETUP);
+            this.planTimeout = ls.get(LogistSettings.TimeoutKey.PLAN);
+            this.bidTimeout = ls.get(LogistSettings.TimeoutKey.BID);
+        } catch (Exception e) {
+        	e.printStackTrace();
+            System.out.println("Unable to parse config file.");
+        }  
+       
+		this.currentSolution = new Solution(agent.vehicles());
+		
 		long seed = -9019554669489983951L * currentCity.hashCode() * agent.id();
 		this.random = new Random(seed);
 	}
@@ -47,26 +83,61 @@ public class AuctionSmart implements AuctionBehavior {
 	@Override
 	public void auctionResult(Task previous, int winner, Long[] bids) {
 		if (winner == agent.id()) {
-			currentCity = previous.deliveryCity;
+			this.tasksSoFar.add(previous);
+			this.currentSolution = newSolution.solutionDeepCopy();
+			
+			// If we won this round, nullify the new solution
+			// Otherwise, keep it for the next round
+			this.newSolution = null;
+			
 		}
+		
+		// Update bookkeeping - bid history & agents' win counts
+		this.updateBidHistoryAndWinners(bids, winner);
 	}
 
+	private void updateBidHistoryAndWinners(Long[] newBids, int winnerId) {
+		for (int i = 0; i < newBids.length; i++) {
+			this.agentsBidsHistory.computeIfAbsent(i, k -> new LinkedList<Long>());
+			this.agentsBidsHistory.get(i).add(newBids[i]);
+		}
+		this.winCounts.add(winnerId, this.winCounts.get(winnerId)+1);
+	}
+	
 	@Override
 	public Long askPrice(Task task) {
-
-		if (vehicle.capacity() < task.weight)
+		
+		Vehicle biggestVehicle = Utils.findBiggestVehicle(this.agent.vehicles());
+		if (biggestVehicle.capacity() < task.weight)
 			return null;
 
 		long distanceTask = task.pickupCity.distanceUnitsTo(task.deliveryCity);
 		long distanceSum = distanceTask + currentCity.distanceUnitsTo(task.pickupCity);
-		double marginalCost = Measures.unitsToKM(distanceSum * vehicle.costPerKm());
+		
+		double marginalCost = computeSimpleMarginalCost(task);
 
-		double ratio = 1.0 + (random.nextDouble() * 0.05 * task.id);
+		double ratio = 1.0 + (random.nextDouble() * this.increaseRate * task.id);
 		double bid = ratio * marginalCost;
 
 		return (long) Math.round(bid);
 	}
 
+	// Simple computation of marginal cost - difference between extended solution and current solution
+	public double computeSimpleMarginalCost(Task taskToAdd) {
+		double marginalCost = 0.0;
+		
+		// TODO: do stuff
+		this.currentSolution = this.getBestSlsSolution(agent.vehicles(), this.tasksSoFar, this.iterationsBound, this.p, this.startTime, this.pickRandom);
+		TaskSet extendedTasks = this.tasksSoFar.clone();
+		extendedTasks.add(taskToAdd);
+		this.newSolution = this.getBestSlsSolution(agent.vehicles(), extendedTasks, this.iterationsBound, this.p, this.startTime, this.pickRandom);
+		
+		double currentSolutionCost = this.currentSolution.computeCost();
+		double extendedSolutionCost = this.newSolution.computeCost();
+		
+		return Math.max(0, extendedSolutionCost - currentSolutionCost);
+	}
+	
 	@Override
 	public List<Plan> plan(List<Vehicle> vehicles, TaskSet tasks) {
 
@@ -105,10 +176,10 @@ public class AuctionSmart implements AuctionBehavior {
 		return plan;
 	}
 
-	
-	// SLS Stuff from previous lab
-	// ===================================
-	private List<Plan> slsPlans(List<Vehicle> vehicles, TaskSet tasks, int iterationsBound, double p, long startTime,
+
+// SLS Stuff from previous lab
+// ===================================
+	private Solution getBestSlsSolution(List<Vehicle> vehicles, TaskSet tasks, int iterationsBound, double p, long startTime,
 			boolean pickRandom) {
 		Solution currentBestSolution = new Solution(vehicles, tasks);
 		currentBestSolution.createRandomInitialSolution();
@@ -151,16 +222,27 @@ public class AuctionSmart implements AuctionBehavior {
 
 			bestSoFar = currentBestSolution.computeCost() < bestSoFar.computeCost() ? currentBestSolution : bestSoFar;
 		}
-
-		// Build logist plan for every vehicle from the actions in the best solution
-		// found
+		return bestSoFar;
+	}
+		
+	private List<Plan> buildAgentPlansFromSolution(List<Vehicle> vehicles, Solution s) {
 		List<Plan> optimalVehiclePlans = new ArrayList<Plan>(vehicles.size());
 		for (Vehicle v : vehicles) {
-			LinkedList<DecentralizedAction> actions = bestSoFar.getActions().get(v);
-			Plan plan = bestSoFar.buildPlanFromActionList(actions, v.getCurrentCity());
+			LinkedList<DecentralizedAction> actions = s.getActions().get(v);
+			Plan plan = s.buildPlanFromActionList(actions, v.getCurrentCity());
 			optimalVehiclePlans.add(plan);
 		}
 		return optimalVehiclePlans;
+	}
+	
+	private List<Plan> slsPlans(List<Vehicle> vehicles, TaskSet tasks, int iterationsBound, double p, long startTime,
+			boolean pickRandom) {
+		
+		Solution bestSolution = getBestSlsSolution(vehicles, tasks, iterationsBound, p, startTime, pickRandom);
+
+		// Build logist plan for every vehicle from the actions in the best solution
+		// found
+		return this.buildAgentPlansFromSolution(vehicles, bestSolution);
 	}
 
 	private boolean timeOut(long startTime) {

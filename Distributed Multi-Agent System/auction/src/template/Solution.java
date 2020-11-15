@@ -20,7 +20,11 @@ public class Solution {
 	private List<Vehicle> vehicles;
 	private HashMap<Vehicle, Plan> plans;
 	private HashMap<Vehicle, LinkedList<DecentralizedAction>> actions;
-	private TaskSet tasks;
+	private ArrayList<Task> tasks;
+	
+	public ArrayList<Task> getTasks() {
+		return this.tasks;
+	}
 	
 	// A solution constructor for the Decentralized MAS
 	public Solution(List<Vehicle> vehicles) {
@@ -32,6 +36,16 @@ public class Solution {
 		this.vehicles = vehicles;
 	}
 	
+	public Solution(List<Vehicle> vehicles, ArrayList<Task> tasks) {
+		this.plans = new HashMap<Vehicle, Plan>();	
+		this.actions = new HashMap<Vehicle, LinkedList<DecentralizedAction>>();
+		for (Vehicle v : vehicles) {
+			this.actions.put(v, new LinkedList<DecentralizedAction>());
+		}
+		this.vehicles = vehicles;
+		this.tasks = new ArrayList<Task>(tasks);
+	}
+		
 	public Solution(List<Vehicle> vehicles, TaskSet tasks) {
 		this.plans = new HashMap<Vehicle, Plan>();	
 		this.actions = new HashMap<Vehicle, LinkedList<DecentralizedAction>>();
@@ -39,7 +53,6 @@ public class Solution {
 			this.actions.put(v, new LinkedList<DecentralizedAction>());
 		}
 		this.vehicles = vehicles;
-		this.tasks = tasks.clone();
 	}
 	
 	// Extends current solution by including the new task
@@ -180,7 +193,7 @@ public class Solution {
 					newSolutionActions.put(from, vehicleActions);
 					
 					// create a new solution and add to the list of neighbour solutions
-					Solution solution = new Solution(this.vehicles, this.tasks.clone());
+					Solution solution = new Solution(this.vehicles, this.tasks);
 					solution.setActions(newSolutionActions);
 					neighbourSolutions.add(solution);
 				}
@@ -214,7 +227,7 @@ public class Solution {
 			if (isCapacityEnough(v, newSolutionActions)) {
 				HashMap<Vehicle, LinkedList<DecentralizedAction>> allActions = mapDeepCopy(this.actions);
 				allActions.put(v, newSolutionActions);
-				Solution solution = new Solution(this.vehicles, this.tasks.clone());
+				Solution solution = new Solution(this.vehicles, this.tasks);
 				solution.setActions(allActions);
 				neighbourSolutions.add(solution);
 			}
@@ -230,7 +243,7 @@ public class Solution {
 			if (isCapacityEnough(v, newSolutionActions)) {
 				HashMap<Vehicle, LinkedList<DecentralizedAction>> allActions = mapDeepCopy(this.actions);
 				allActions.put(v, newSolutionActions);
-				Solution solution = new Solution(this.vehicles, this.tasks.clone());
+				Solution solution = new Solution(this.vehicles, this.tasks);
 				solution.setActions(allActions);
 				neighbourSolutions.add(solution);
 			}
@@ -259,7 +272,7 @@ public class Solution {
 			if (isCapacityEnough(v, newSolutionActions)) {
 				HashMap<Vehicle, LinkedList<DecentralizedAction>> allActions = mapDeepCopy(this.actions);
 				allActions.put(v, newSolutionActions);
-				Solution solution = new Solution(this.vehicles, this.tasks.clone());
+				Solution solution = new Solution(this.vehicles, this.tasks);
 				solution.setActions(allActions);
 				neighbourSolutions.add(solution);
 			}
@@ -279,7 +292,7 @@ public class Solution {
 			if (isCapacityEnough(v, newSolutionActions)) {
 				HashMap<Vehicle, LinkedList<DecentralizedAction>> allActions = mapDeepCopy(this.actions);
 				allActions.put(v, newSolutionActions);
-				Solution solution = new Solution(this.vehicles, this.tasks.clone());
+				Solution solution = new Solution(this.vehicles, this.tasks);
 				solution.setActions(allActions);
 				neighbourSolutions.add(solution);
 			}
@@ -362,7 +375,7 @@ public class Solution {
 	
 	// Perform deep copy of the current solution
 	public Solution solutionDeepCopy() {
-		Solution copy = new Solution(this.vehicles, this.tasks.clone());
+		Solution copy = new Solution(this.vehicles, this.tasks);
 		copy.setActions(this.mapDeepCopy(this.actions));
 		HashMap<Vehicle, Plan> plansCopy = new HashMap<Vehicle, Plan>();
 		for (Map.Entry<Vehicle, Plan> entry : this.plans.entrySet()) {

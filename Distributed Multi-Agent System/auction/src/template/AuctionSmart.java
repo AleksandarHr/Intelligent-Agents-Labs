@@ -36,26 +36,28 @@ public class AuctionSmart implements AuctionBehavior {
 	private Random random;
 	private Vehicle vehicle;
 	private City currentCity;
-	private TaskSet tasksSoFar;
-	
-	private Solution currentSolution, newSolution;
+	private ArrayList<Task> taskArray;
+
+	private Solution currentSolution, extendedSolution;
 	private HashMap<Integer, List<Long>> agentsBidsHistory;
 	private ArrayList<Integer> winCounts;
+	private long totalBidsWon = 0; 
 	
 	private long setupTimeout, planTimeout, bidTimeout;
-	
+
 	private double increaseRate = 0.05;
 	int iterationsBound = 10000;
-	double p = 0.5;
+	double p = 0.3;
 	long startTime;
 	boolean pickRandom = true;
-	
+
 	@Override
 	public void setup(Topology topology, TaskDistribution distribution, Agent agent) {
 
 		this.agentsBidsHistory = new HashMap<Integer, List<Long>>();
 		this.winCounts = new ArrayList<Integer>();
-		
+		this.taskArray = new ArrayList<Task>();
+
 		this.topology = topology;
 		this.distribution = distribution;
 		this.agent = agent;
@@ -63,19 +65,19 @@ public class AuctionSmart implements AuctionBehavior {
 		this.currentCity = vehicle.homeCity();
 
 		// Read in timeouts for setup, plan, and bid
-        LogistSettings ls = null;
-        try {
-            ls = Parsers.parseSettings("config" + File.separator + "settings_auction.xml");
-            this.setupTimeout = ls.get(LogistSettings.TimeoutKey.SETUP);
-            this.planTimeout = ls.get(LogistSettings.TimeoutKey.PLAN);
-            this.bidTimeout = ls.get(LogistSettings.TimeoutKey.BID);
-        } catch (Exception e) {
-        	e.printStackTrace();
-            System.out.println("Unable to parse config file.");
-        }  
-       
+		LogistSettings ls = null;
+		try {
+			ls = Parsers.parseSettings("config" + File.separator + "settings_auction.xml");
+			this.setupTimeout = ls.get(LogistSettings.TimeoutKey.SETUP);
+			this.planTimeout = ls.get(LogistSettings.TimeoutKey.PLAN);
+			this.bidTimeout = ls.get(LogistSettings.TimeoutKey.BID);
+		} catch (Exception e) {
+			e.printStackTrace();
+			System.out.println("Unable to parse config file.");
+		}
+
 		this.currentSolution = new Solution(agent.vehicles());
-		
+
 		long seed = -9019554669489983951L * currentCity.hashCode() * agent.id();
 		this.random = new Random(seed);
 	}
@@ -83,15 +85,11 @@ public class AuctionSmart implements AuctionBehavior {
 	@Override
 	public void auctionResult(Task previous, int winner, Long[] bids) {
 		if (winner == agent.id()) {
-			this.tasksSoFar.add(previous);
-			this.currentSolution = newSolution.solutionDeepCopy();
-			
-			// If we won this round, nullify the new solution
-			// Otherwise, keep it for the next round
-			this.newSolution = null;
-			
+			this.taskArray.add(previous);
+			this.currentSolution = extendedSolution.solutionDeepCopy();
+			this.totalBidsWon += bids[winner];
 		}
-		
+
 		// Update bookkeeping - bid history & agents' win counts
 		this.updateBidHistoryAndWinners(bids, winner);
 	}
@@ -101,19 +99,19 @@ public class AuctionSmart implements AuctionBehavior {
 			this.agentsBidsHistory.computeIfAbsent(i, k -> new LinkedList<Long>());
 			this.agentsBidsHistory.get(i).add(newBids[i]);
 		}
-		this.winCounts.add(winnerId, this.winCounts.get(winnerId)+1);
+//		this.winCounts.add(winnerId, this.winCounts.get(winnerId)+1);
 	}
-	
+
 	@Override
 	public Long askPrice(Task task) {
-		
+
 		Vehicle biggestVehicle = Utils.findBiggestVehicle(this.agent.vehicles());
 		if (biggestVehicle.capacity() < task.weight)
 			return null;
 
 		long distanceTask = task.pickupCity.distanceUnitsTo(task.deliveryCity);
 		long distanceSum = distanceTask + currentCity.distanceUnitsTo(task.pickupCity);
-		
+
 		double marginalCost = computeSimpleMarginalCost(task);
 
 		double ratio = 1.0 + (random.nextDouble() * this.increaseRate * task.id);
@@ -122,33 +120,45 @@ public class AuctionSmart implements AuctionBehavior {
 		return (long) Math.round(bid);
 	}
 
-	// Simple computation of marginal cost - difference between extended solution and current solution
+	// Simple computation of marginal cost - difference between extended solution
+	// and current solution
 	public double computeSimpleMarginalCost(Task taskToAdd) {
 		double marginalCost = 0.0;
-		
+
 		// TODO: do stuff
-		this.currentSolution = this.getBestSlsSolution(agent.vehicles(), this.tasksSoFar, this.iterationsBound, this.p, this.startTime, this.pickRandom);
-		TaskSet extendedTasks = this.tasksSoFar.clone();
+//		this.currentSolution = this.getBestSlsSolution(agent.vehicles(), this.tasksSoFar, this.iterationsBound, this.p, this.startTime, this.pickRandom);
+		ArrayList<Task> extendedTasks = new ArrayList<Task>(this.taskArray);
 		extendedTasks.add(taskToAdd);
-		this.newSolution = this.getBestSlsSolution(agent.vehicles(), extendedTasks, this.iterationsBound, this.p, this.startTime, this.pickRandom);
-		
+		this.extendedSolution = this.getBestSlsSolution(agent.vehicles(), extendedTasks, this.iterationsBound, this.p,
+				this.startTime, this.pickRandom);
+
 		double currentSolutionCost = this.currentSolution.computeCost();
-		double extendedSolutionCost = this.newSolution.computeCost();
-		
+		double extendedSolutionCost = this.extendedSolution.computeCost();
+
 		return Math.max(0, extendedSolutionCost - currentSolutionCost);
 	}
-	
+
 	@Override
 	public List<Plan> plan(List<Vehicle> vehicles, TaskSet tasks) {
 
-//		System.out.println("Agent " + agent.id() + " has tasks " + tasks);
+		System.out.println("Agent " + agent.id() + " has tasks " + tasks);
 
-		Plan planVehicle1 = naivePlan(vehicle, tasks);
+//		Plan planVehicle1 = naivePlan(vehicle, tasks);
+//		List<Plan> plans = new ArrayList<Plan>();
+//		plans.add(planVehicle1);
+//		while (plans.size() < vehicles.size())
+//			plans.add(Plan.EMPTY);
+        long time_start = System.currentTimeMillis();
 
-		List<Plan> plans = new ArrayList<Plan>();
-		plans.add(planVehicle1);
-		while (plans.size() < vehicles.size())
-			plans.add(Plan.EMPTY);
+		List<Plan> plans = slsPlans(vehicles, this.taskArray, iterationsBound, p, time_start, pickRandom);
+		double cost = 0.0;
+		for (int i = 0; i < plans.size(); i++) {
+			cost += plans.get(i).totalDistance() * vehicles.get(i).costPerKm();
+		}
+		System.out.println("TOTAL COST = " + cost);
+		System.out.println("TOTAL SMART PROFIT = " + (this.totalBidsWon - cost));
+		long time_end = System.currentTimeMillis();
+//		long duration = time_end - time_start;
 
 		return plans;
 	}
@@ -176,11 +186,10 @@ public class AuctionSmart implements AuctionBehavior {
 		return plan;
 	}
 
-
 // SLS Stuff from previous lab
 // ===================================
-	private Solution getBestSlsSolution(List<Vehicle> vehicles, TaskSet tasks, int iterationsBound, double p, long startTime,
-			boolean pickRandom) {
+	private Solution getBestSlsSolution(List<Vehicle> vehicles, ArrayList<Task> tasks, int iterationsBound, double p,
+			long startTime, boolean pickRandom) {
 		Solution currentBestSolution = new Solution(vehicles, tasks);
 		currentBestSolution.createRandomInitialSolution();
 
@@ -224,7 +233,7 @@ public class AuctionSmart implements AuctionBehavior {
 		}
 		return bestSoFar;
 	}
-		
+
 	private List<Plan> buildAgentPlansFromSolution(List<Vehicle> vehicles, Solution s) {
 		List<Plan> optimalVehiclePlans = new ArrayList<Plan>(vehicles.size());
 		for (Vehicle v : vehicles) {
@@ -234,12 +243,12 @@ public class AuctionSmart implements AuctionBehavior {
 		}
 		return optimalVehiclePlans;
 	}
-	
-	private List<Plan> slsPlans(List<Vehicle> vehicles, TaskSet tasks, int iterationsBound, double p, long startTime,
-			boolean pickRandom) {
-		
-		Solution bestSolution = getBestSlsSolution(vehicles, tasks, iterationsBound, p, startTime, pickRandom);
 
+	private List<Plan> slsPlans(List<Vehicle> vehicles, ArrayList<Task> tasks, int iterationsBound, double p,
+			long startTime, boolean pickRandom) {
+
+		Solution bestSolution = getBestSlsSolution(vehicles, tasks, iterationsBound, p, startTime, pickRandom);
+		System.out.println("# TASKS = " + bestSolution.getTasks().size());
 		// Build logist plan for every vehicle from the actions in the best solution
 		// found
 		return this.buildAgentPlansFromSolution(vehicles, bestSolution);
@@ -254,5 +263,4 @@ public class AuctionSmart implements AuctionBehavior {
 		// Half of a second to build a plan
 		return duration < timeout_plan - 500;
 	}
-
 }

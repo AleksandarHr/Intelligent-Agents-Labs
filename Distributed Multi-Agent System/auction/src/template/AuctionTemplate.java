@@ -30,7 +30,8 @@ public class AuctionTemplate implements AuctionBehavior {
 	private Random random;
 	private Vehicle vehicle;
 	private City currentCity;
-
+	private long totalBidsWon = 0;
+	
 	@Override
 	public void setup(Topology topology, TaskDistribution distribution,
 			Agent agent) {
@@ -49,6 +50,7 @@ public class AuctionTemplate implements AuctionBehavior {
 	public void auctionResult(Task previous, int winner, Long[] bids) {
 		if (winner == agent.id()) {
 			currentCity = previous.deliveryCity;
+			this.totalBidsWon += bids[winner];
 		}
 	}
 	
@@ -81,7 +83,7 @@ public class AuctionTemplate implements AuctionBehavior {
 		plans.add(planVehicle1);
 		while (plans.size() < vehicles.size())
 			plans.add(Plan.EMPTY);
-
+		System.out.println("NAIVE # tasks = " + " :: naive profit = " + (this.totalBidsWon - planVehicle1.totalDistance()*vehicle.costPerKm()));
 		return plans;
 	}
 

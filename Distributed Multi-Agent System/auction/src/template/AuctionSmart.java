@@ -42,7 +42,7 @@ public class AuctionSmart implements AuctionBehavior {
 
 	private Solution currentSolution, extendedSolution;
 	private HashMap<Integer, List<Long>> agentsBidsHistory;
-	private ArrayList<Integer> winCounts;
+	private HashMap<Integer, Integer> winCounts;
 	private long totalBidsWon = 0;
 
 	private long setupTimeout, planTimeout, bidTimeout;
@@ -58,7 +58,7 @@ public class AuctionSmart implements AuctionBehavior {
 	public void setup(Topology topology, TaskDistribution distribution, Agent agent) {
 
 		this.agentsBidsHistory = new HashMap<Integer, List<Long>>();
-		this.winCounts = new ArrayList<Integer>();
+		this.winCounts = new HashMap<Integer, Integer>();
 		this.taskArray = new ArrayList<Task>();
 
 		this.topology = topology;
@@ -102,8 +102,10 @@ public class AuctionSmart implements AuctionBehavior {
 		for (int i = 0; i < newBids.length; i++) {
 			this.agentsBidsHistory.computeIfAbsent(i, k -> new LinkedList<Long>());
 			this.agentsBidsHistory.get(i).add(newBids[i]);
+			this.winCounts.putIfAbsent(i, 0);
+			this.winCounts.put(winnerId, this.winCounts.get(winnerId) + 1);
+
 		}
-//		this.winCounts.add(winnerId, this.winCounts.get(winnerId)+1);
 	}
 
 	@Override
@@ -119,8 +121,8 @@ public class AuctionSmart implements AuctionBehavior {
 
 		double marginalCost = computeLessSimpleMarginalCost(task);
 
-		double ratio = 1.0 + (random.nextDouble() * this.increaseRate * task.id);
-		double bid = (1.0 + increaseRate) * marginalCost;
+		// double ratio = 1.0 + (random.nextDouble() * this.increaseRate * task.id);
+		double bid = computeBid(marginalCost);
 		System.out.println("MARGINAL = " + marginalCost + "  ::  BID = " + bid);
 
 		return (long) Math.round(bid);
@@ -136,39 +138,32 @@ public class AuctionSmart implements AuctionBehavior {
 		extendedTasks.add(taskToAdd);
 		this.extendedSolution = this.getBestSlsSolution(agent.vehicles(), extendedTasks, this.iterationsBound, this.p,
 				this.startTime, this.pickRandom);
+
+		double currentSolutionCost = this.currentSolution.computeCost();
+		double extendedSolutionCost = this.extendedSolution.computeCost();
+
+		marginalCost = Math.max(0, extendedSolutionCost - currentSolutionCost);
 //
 
 		// ADD future prediction task
-		Random rand = new Random();
-		List<City> cities = this.topology.cities();
-		City from = null;
-		City to = null;
 		double worstMarginalCost = Double.MAX_VALUE;
 		int idCounter = 100;
 		for (int i = 0; i < 15; i++) {
 			ArrayList<Task> futureTasks = new ArrayList<Task>(this.taskArray);
 			ArrayList<Task> futureExtendedTasks = new ArrayList<Task>(futureTasks);
 			futureExtendedTasks.add(taskToAdd);
-//			for (int j = 0; j < 10; j++) {
-//				while (from == null || to == null || to == from || this.distribution.probability(from, to) < 0.1) {
-//					from = cities.get(rand.nextInt(cities.size()));
-//					to = cities.get(rand.nextInt(cities.size()));
-//					System.out.println("PROB = " + this.distribution.probability(from, to));
-//				}
-//				int expectedWeight = this.distribution.weight(from, to);
-//				int expectedReward = this.distribution.reward(from, to);
-				Task predictedTask = this.defaultDistribution.createTask();
-//				idCounter++;
-				futureTasks.add(predictedTask);
-				futureExtendedTasks.add(predictedTask);
-//			}
+
+			Task predictedTask = this.defaultDistribution.createTask();
+			futureTasks.add(predictedTask);
+			futureExtendedTasks.add(predictedTask);
+
 			Solution tempCurrent = this.getBestSlsSolution(agent.vehicles(), futureTasks, this.iterationsBound, this.p,
 					this.startTime, this.pickRandom);
 			Solution tempExtended = this.getBestSlsSolution(agent.vehicles(), futureExtendedTasks, this.iterationsBound,
 					this.p, this.startTime, this.pickRandom);
 
-			double currentSolutionCost = tempCurrent.computeCost();
-			double extendedSolutionCost = tempExtended.computeCost();
+			currentSolutionCost = tempCurrent.computeCost();
+			extendedSolutionCost = tempExtended.computeCost();
 			double tempMarginal = Math.max(0.0, extendedSolutionCost - currentSolutionCost);
 //			System.out.println("TEMP MARGINAL = " + tempMarginal + "  ::  MARGINAL = " + worstMarginalCost);
 			if (tempMarginal < worstMarginalCost && tempMarginal != 0.0) {
@@ -177,7 +172,10 @@ public class AuctionSmart implements AuctionBehavior {
 		}
 //		return Math.max(0, extendedSolutionCost - currentSolutionCost);
 
-		return worstMarginalCost;
+		//return worstMarginalCost;
+		double bid = Math.min(marginalCost, worstMarginalCost);
+		//bid = marginalCost - (marginalCost - bid) * risk;
+		return bid;
 	}
 
 	// Simple computation of marginal cost - difference between extended solution
@@ -326,5 +324,62 @@ public class AuctionSmart implements AuctionBehavior {
 		long duration = currentTime - startTime;
 		// Half of a second to build a plan
 		return duration < timeout_plan - 500;
+	}
+
+	public long computeBid(double marginalCost) {
+		double bid = 0;
+		//We skip the first round because there is no available info of the other agent
+		if (this.winCounts.size() == 0) {
+			return (long) marginalCost;
+		}
+
+		int idx = getBestOpponentAgentIndex();
+		
+		//Get the minimal bet of the other best agent
+		Long minBid = getOtherAgentMinBid(agentsBidsHistory.get(idx));
+
+		//Add 30% of our marginal cost to their minBid if we bid too low
+		if (minBid > marginalCost) {
+			bid = 0.3 * marginalCost + minBid;
+		} else {
+			bid = marginalCost;
+		}
+
+		return (long) Math.ceil(bid);
+	}
+
+	//This entire function is useless if we play only against one agent
+	public int getBestOpponentAgentIndex() {
+		int bestAgentId = 0;
+		int winNumberBestAgent = -1;
+
+		for (int id : agentsBidsHistory.keySet()) {
+			if (id == agent.id()) {
+				continue;
+			}
+			int bestAgenWinCount = this.winCounts.get(id);
+
+			//Useless if we are playing against one other agent
+			if (bestAgenWinCount > winNumberBestAgent) {
+				winNumberBestAgent = bestAgenWinCount;
+				bestAgentId = id;
+			}
+		}
+
+		return bestAgentId;
+	}
+
+	//Look at 5 last bids the best agent has made and return the smallest one
+	public Long getOtherAgentMinBid(List<Long> agentBidHistory) {
+		double minimalBid = Double.MAX_VALUE;
+
+		//Check the 5 newest bids of the other agent
+		for (int i = agentBidHistory.size() - 1; i >= (agentBidHistory.size() - 1 - Math.min(5, agentBidHistory.size() - 1)); i--) {
+			if(agentBidHistory.get(i) < minimalBid) {
+				minimalBid = agentBidHistory.get(i);
+			}
+		}
+
+		return (long) minimalBid;
 	}
 }

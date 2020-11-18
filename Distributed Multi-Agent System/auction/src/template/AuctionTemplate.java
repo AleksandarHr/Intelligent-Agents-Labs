@@ -83,7 +83,7 @@ public class AuctionTemplate implements AuctionBehavior {
 		plans.add(planVehicle1);
 		while (plans.size() < vehicles.size())
 			plans.add(Plan.EMPTY);
-		System.out.println("NAIVE # tasks = " + " :: naive profit = " + (this.totalBidsWon - planVehicle1.totalDistance()*vehicle.costPerKm()));
+		System.out.println("TOTAL NAIVE COST = " + planVehicle1.totalDistance()*vehicle.costPerKm() +" TOTAL NAIVE PROFIT = " + (this.totalBidsWon - planVehicle1.totalDistance()*vehicle.costPerKm()));
 		return plans;
 	}
 

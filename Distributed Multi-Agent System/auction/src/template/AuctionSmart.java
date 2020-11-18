@@ -141,7 +141,7 @@ public class AuctionSmart implements AuctionBehavior {
 	@Override
 	public List<Plan> plan(List<Vehicle> vehicles, TaskSet tasks) {
 
-		System.out.println("Agent " + agent.id() + " has tasks " + tasks);
+		//System.out.println("Agent " + agent.id() + " has tasks " + tasks);
 
 //		Plan planVehicle1 = naivePlan(vehicle, tasks);
 //		List<Plan> plans = new ArrayList<Plan>();
@@ -155,8 +155,8 @@ public class AuctionSmart implements AuctionBehavior {
 		for (int i = 0; i < plans.size(); i++) {
 			cost += plans.get(i).totalDistance() * vehicles.get(i).costPerKm();
 		}
-		System.out.println("TOTAL COST = " + cost);
-		System.out.println("TOTAL SMART PROFIT = " + (this.totalBidsWon - cost));
+		System.out.println("TOTAL SMART COST = " + cost +" TOTAL SMART PROFIT = " + (this.totalBidsWon - cost));
+		System.out.println("BIDDING HISTORY:");
 		long time_end = System.currentTimeMillis();
 //		long duration = time_end - time_start;
 
@@ -248,7 +248,7 @@ public class AuctionSmart implements AuctionBehavior {
 			long startTime, boolean pickRandom) {
 
 		Solution bestSolution = getBestSlsSolution(vehicles, tasks, iterationsBound, p, startTime, pickRandom);
-		System.out.println("# TASKS = " + bestSolution.getTasks().size());
+		System.out.println("# SMART TASKS = " + bestSolution.getTasks().size());
 		// Build logist plan for every vehicle from the actions in the best solution
 		// found
 		return this.buildAgentPlansFromSolution(vehicles, bestSolution);

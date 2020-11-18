@@ -20,7 +20,6 @@ import logist.task.TaskDistribution;
 import logist.task.TaskSet;
 import logist.topology.Topology;
 import logist.topology.Topology.City;
-import logist.task.DefaultTaskDistribution;
 
 import template.Utils;
 
@@ -29,11 +28,10 @@ import template.Utils;
  * 
  */
 @SuppressWarnings("unused")
-public class AuctionSmart implements AuctionBehavior {
+public class AuctionSmartSimple implements AuctionBehavior {
 
 	private Topology topology;
 	private TaskDistribution distribution;
-	private DefaultTaskDistribution defaultDistribution;
 	private Agent agent;
 	private Random random;
 	private Vehicle vehicle;
@@ -48,7 +46,6 @@ public class AuctionSmart implements AuctionBehavior {
 	private long setupTimeout, planTimeout, bidTimeout;
 
 	private double increaseRate = 0.05;
-	private double risk = 0.9;
 	int iterationsBound = 10000;
 	double p = 0.3;
 	long startTime;
@@ -63,7 +60,6 @@ public class AuctionSmart implements AuctionBehavior {
 
 		this.topology = topology;
 		this.distribution = distribution;
-		this.defaultDistribution = (DefaultTaskDistribution) this.distribution;
 		this.agent = agent;
 		this.vehicle = agent.vehicles().get(0);
 		this.currentCity = vehicle.homeCity();
@@ -117,11 +113,11 @@ public class AuctionSmart implements AuctionBehavior {
 		long distanceTask = task.pickupCity.distanceUnitsTo(task.deliveryCity);
 		long distanceSum = distanceTask + currentCity.distanceUnitsTo(task.pickupCity);
 
-		double marginalCost = computeLessSimpleMarginalCost(task);
+		double marginalCost = computeSimpleMarginalCost(task);
 
 		double ratio = 1.0 + (random.nextDouble() * this.increaseRate * task.id);
 		double bid = (1.0 + increaseRate) * marginalCost;
-		
+
 		return (long) Math.round(bid);
 	}
 
@@ -153,7 +149,6 @@ public class AuctionSmart implements AuctionBehavior {
 				while (from == null || to == null || to == from || this.distribution.probability(from, to) < 0.1) {
 					from = cities.get(rand.nextInt(cities.size()));
 					to = cities.get(rand.nextInt(cities.size()));
-					System.out.println("PROB = " + this.distribution.probability(from, to));
 				}
 				int expectedWeight = this.distribution.weight(from, to);
 				int expectedReward = this.distribution.reward(from, to);
@@ -166,7 +161,7 @@ public class AuctionSmart implements AuctionBehavior {
 					this.startTime, this.pickRandom);
 			Solution tempExtended = this.getBestSlsSolution(agent.vehicles(), futureExtendedTasks, this.iterationsBound,
 					this.p, this.startTime, this.pickRandom);
-
+			
 			double currentSolutionCost = tempCurrent.computeCost();
 			double extendedSolutionCost = tempExtended.computeCost();
 			double tempMarginal = Math.max(0, extendedSolutionCost - currentSolutionCost);
@@ -204,17 +199,15 @@ public class AuctionSmart implements AuctionBehavior {
 
 		// System.out.println("Agent " + agent.id() + " has tasks " + tasks);
 
-		System.out.println("Start planning: " + this.taskArray);
 		long time_start = System.currentTimeMillis();
 
 		List<Plan> plans = slsPlans(vehicles, this.taskArray, iterationsBound, p, time_start, pickRandom);
-		System.out.println("Done planning");
 		double cost = 0.0;
 		for (int i = 0; i < plans.size(); i++) {
 			cost += plans.get(i).totalDistance() * vehicles.get(i).costPerKm();
 		}
-		System.out.println("TOTAL SMART COST = " + cost + " TOTAL SMART PROFIT = " + (this.totalBidsWon - cost));
-		System.out.println("BIDDING HISTORY:");
+		System.out.println("COST (NO FUTURE) = " + cost + " PROFIT (NO FUTURE) = " + (this.totalBidsWon - cost));
+//		System.out.println("BIDDING HISTORY:");
 		for (int i = 0; i < this.agentsBidsHistory.size(); i++) {
 			if (i == agent.id()) {
 				System.out.println("Our agent bids are: " + this.agentsBidsHistory.get(i));

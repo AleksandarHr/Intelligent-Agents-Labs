@@ -47,7 +47,7 @@ public class AuctionSmart implements AuctionBehavior {
 
 	private long setupTimeout, planTimeout, bidTimeout;
 
-	private double increaseRate = 0.05;
+	private double increaseRate = 0.5;
 	private double risk = 0.9;
 	int iterationsBound = 10000;
 	double p = 0.3;
@@ -121,7 +121,8 @@ public class AuctionSmart implements AuctionBehavior {
 
 		double ratio = 1.0 + (random.nextDouble() * this.increaseRate * task.id);
 		double bid = (1.0 + increaseRate) * marginalCost;
-		
+		System.out.println("MARGINAL = " + marginalCost + "  ::  BID = " + bid);
+
 		return (long) Math.round(bid);
 	}
 
@@ -131,10 +132,10 @@ public class AuctionSmart implements AuctionBehavior {
 		double marginalCost = 0.0;
 
 //		this.currentSolution = this.getBestSlsSolution(agent.vehicles(), this.tasksSoFar, this.iterationsBound, this.p, this.startTime, this.pickRandom);
-//		ArrayList<Task> extendedTasks = new ArrayList<Task>(this.taskArray);
-//		extendedTasks.add(taskToAdd);
-//		this.extendedSolution = this.getBestSlsSolution(agent.vehicles(), extendedTasks, this.iterationsBound, this.p,
-//				this.startTime, this.pickRandom);
+		ArrayList<Task> extendedTasks = new ArrayList<Task>(this.taskArray);
+		extendedTasks.add(taskToAdd);
+		this.extendedSolution = this.getBestSlsSolution(agent.vehicles(), extendedTasks, this.iterationsBound, this.p,
+				this.startTime, this.pickRandom);
 //
 
 		// ADD future prediction task
@@ -144,21 +145,20 @@ public class AuctionSmart implements AuctionBehavior {
 		City to = null;
 		double worstMarginalCost = Double.MAX_VALUE;
 		int idCounter = 100;
-		for (int i = 0; i < 10; i++) {
-			worstMarginalCost = Double.MAX_VALUE;
+		for (int i = 0; i < 15; i++) {
 			ArrayList<Task> futureTasks = new ArrayList<Task>(this.taskArray);
 			ArrayList<Task> futureExtendedTasks = new ArrayList<Task>(futureTasks);
 			futureExtendedTasks.add(taskToAdd);
 //			for (int j = 0; j < 10; j++) {
-				while (from == null || to == null || to == from || this.distribution.probability(from, to) < 0.1) {
-					from = cities.get(rand.nextInt(cities.size()));
-					to = cities.get(rand.nextInt(cities.size()));
-					System.out.println("PROB = " + this.distribution.probability(from, to));
-				}
-				int expectedWeight = this.distribution.weight(from, to);
-				int expectedReward = this.distribution.reward(from, to);
-				Task predictedTask = new Task(idCounter, from, to, expectedReward, expectedWeight);
-				idCounter++;
+//				while (from == null || to == null || to == from || this.distribution.probability(from, to) < 0.1) {
+//					from = cities.get(rand.nextInt(cities.size()));
+//					to = cities.get(rand.nextInt(cities.size()));
+//					System.out.println("PROB = " + this.distribution.probability(from, to));
+//				}
+//				int expectedWeight = this.distribution.weight(from, to);
+//				int expectedReward = this.distribution.reward(from, to);
+				Task predictedTask = this.defaultDistribution.createTask();
+//				idCounter++;
 				futureTasks.add(predictedTask);
 				futureExtendedTasks.add(predictedTask);
 //			}
@@ -169,11 +169,10 @@ public class AuctionSmart implements AuctionBehavior {
 
 			double currentSolutionCost = tempCurrent.computeCost();
 			double extendedSolutionCost = tempExtended.computeCost();
-			double tempMarginal = Math.max(0, extendedSolutionCost - currentSolutionCost);
+			double tempMarginal = Math.max(0.0, extendedSolutionCost - currentSolutionCost);
+//			System.out.println("TEMP MARGINAL = " + tempMarginal + "  ::  MARGINAL = " + worstMarginalCost);
 			if (tempMarginal < worstMarginalCost && tempMarginal != 0.0) {
 				worstMarginalCost = tempMarginal;
-				this.currentSolution = tempCurrent;
-				this.extendedSolution = tempExtended;
 			}
 		}
 //		return Math.max(0, extendedSolutionCost - currentSolutionCost);
@@ -204,11 +203,11 @@ public class AuctionSmart implements AuctionBehavior {
 
 		// System.out.println("Agent " + agent.id() + " has tasks " + tasks);
 
-		System.out.println("Start planning: " + this.taskArray);
+//		System.out.println("Start planning: " + this.taskArray);
 		long time_start = System.currentTimeMillis();
 
 		List<Plan> plans = slsPlans(vehicles, this.taskArray, iterationsBound, p, time_start, pickRandom);
-		System.out.println("Done planning");
+//		System.out.println("Done planning");
 		double cost = 0.0;
 		for (int i = 0; i < plans.size(); i++) {
 			cost += plans.get(i).totalDistance() * vehicles.get(i).costPerKm();
@@ -313,7 +312,7 @@ public class AuctionSmart implements AuctionBehavior {
 			long startTime, boolean pickRandom) {
 
 		Solution bestSolution = getBestSlsSolution(vehicles, tasks, iterationsBound, p, startTime, pickRandom);
-		System.out.println("# SMART TASKS = " + bestSolution.getTasks().size());
+		System.out.println("# SMART TASKS with future = " + bestSolution.getTasks().size());
 		// Build logist plan for every vehicle from the actions in the best solution
 		// found
 		return this.buildAgentPlansFromSolution(vehicles, bestSolution);

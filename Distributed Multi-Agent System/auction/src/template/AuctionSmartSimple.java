@@ -210,9 +210,9 @@ public class AuctionSmartSimple implements AuctionBehavior {
 //		System.out.println("BIDDING HISTORY:");
 		for (int i = 0; i < this.agentsBidsHistory.size(); i++) {
 			if (i == agent.id()) {
-				System.out.println("Our agent bids are: " + this.agentsBidsHistory.get(i));
+//				System.out.println("Our agent bids are: " + this.agentsBidsHistory.get(i));
 			} else {
-				System.out.println("Other agent bids are: " + this.agentsBidsHistory.get(i));
+//				System.out.println("Other agent bids are: " + this.agentsBidsHistory.get(i));
 			}
 		}
 		long time_end = System.currentTimeMillis();
@@ -306,7 +306,7 @@ public class AuctionSmartSimple implements AuctionBehavior {
 			long startTime, boolean pickRandom) {
 
 		Solution bestSolution = getBestSlsSolution(vehicles, tasks, iterationsBound, p, startTime, pickRandom);
-		System.out.println("# SMART TASKS = " + bestSolution.getTasks().size());
+//		System.out.println("# SMART TASKS = " + bestSolution.getTasks().size());
 		// Build logist plan for every vehicle from the actions in the best solution
 		// found
 		return this.buildAgentPlansFromSolution(vehicles, bestSolution);

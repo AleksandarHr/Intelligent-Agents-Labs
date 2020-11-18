@@ -157,6 +157,13 @@ public class AuctionSmart implements AuctionBehavior {
 		}
 		System.out.println("TOTAL SMART COST = " + cost +" TOTAL SMART PROFIT = " + (this.totalBidsWon - cost));
 		System.out.println("BIDDING HISTORY:");
+		for(int i = 0; i < this.agentsBidsHistory.size(); i++) {
+			if(i == agent.id()) {
+				System.out.println("Our agent bids are: " + this.agentsBidsHistory.get(i));
+			} else {
+				System.out.println("Other agent bids are: " + this.agentsBidsHistory.get(i));
+			}
+		}
 		long time_end = System.currentTimeMillis();
 //		long duration = time_end - time_start;
 

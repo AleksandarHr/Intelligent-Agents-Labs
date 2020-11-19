@@ -51,8 +51,12 @@ public class AuctionSmart implements AuctionBehavior {
 	private double risk = 0.9;
 	int iterationsBound = 10000;
 	double p = 0.3;
-	long startTime;
+	//long startTime;
 	boolean pickRandom = true;
+	int slsPredictionsSize = 15;
+	
+	//TESTING
+	long bidStart = 0;
 
 	@Override
 	public void setup(Topology topology, TaskDistribution distribution, Agent agent) {
@@ -106,11 +110,14 @@ public class AuctionSmart implements AuctionBehavior {
 			this.winCounts.put(winnerId, this.winCounts.get(winnerId) + 1);
 
 		}
+		long bidEnd = System.currentTimeMillis();
+		System.out.println("Bidding took: " + (bidEnd - bidStart));
 	}
 
 	@Override
 	public Long askPrice(Task task) {
 
+		bidStart = System.currentTimeMillis();
 		Vehicle biggestVehicle = Utils.findBiggestVehicle(this.agent.vehicles());
 		if (biggestVehicle.capacity() < task.weight) {
 			return null;
@@ -133,11 +140,13 @@ public class AuctionSmart implements AuctionBehavior {
 	public double computeLessSimpleMarginalCost(Task taskToAdd) {
 		double marginalCost = 0.0;
 
+		long startTimeMarginalCost = System.currentTimeMillis();
+		long noFutureTimeOut = 2*(bidTimeout/5);
 //		this.currentSolution = this.getBestSlsSolution(agent.vehicles(), this.tasksSoFar, this.iterationsBound, this.p, this.startTime, this.pickRandom);
 		ArrayList<Task> extendedTasks = new ArrayList<Task>(this.taskArray);
 		extendedTasks.add(taskToAdd);
 		this.extendedSolution = this.getBestSlsSolution(agent.vehicles(), extendedTasks, this.iterationsBound, this.p,
-				this.startTime, this.pickRandom);
+				noFutureTimeOut, this.pickRandom);
 
 		double currentSolutionCost = this.currentSolution.computeCost();
 		double extendedSolutionCost = this.extendedSolution.computeCost();
@@ -145,10 +154,16 @@ public class AuctionSmart implements AuctionBehavior {
 		marginalCost = Math.max(0, extendedSolutionCost - currentSolutionCost);
 //
 
+		long endTimeMarginalCost = System.currentTimeMillis();
+		long timeLeft = bidTimeout - (endTimeMarginalCost - startTimeMarginalCost);
+		
+		long futureTimeOut = (long) ((timeLeft)/slsPredictionsSize)/2;
+		System.out.println("Time left is: " + timeLeft);
+		System.out.println("Future time out is: " + futureTimeOut);
 		// ADD future prediction task
 		double worstMarginalCost = Double.MAX_VALUE;
 		int idCounter = 100;
-		for (int i = 0; i < 15; i++) {
+		for (int i = 0; i < slsPredictionsSize; i++) {
 			ArrayList<Task> futureTasks = new ArrayList<Task>(this.taskArray);
 			ArrayList<Task> futureExtendedTasks = new ArrayList<Task>(futureTasks);
 			futureExtendedTasks.add(taskToAdd);
@@ -158,9 +173,9 @@ public class AuctionSmart implements AuctionBehavior {
 			futureExtendedTasks.add(predictedTask);
 
 			Solution tempCurrent = this.getBestSlsSolution(agent.vehicles(), futureTasks, this.iterationsBound, this.p,
-					this.startTime, this.pickRandom);
+					futureTimeOut, this.pickRandom);
 			Solution tempExtended = this.getBestSlsSolution(agent.vehicles(), futureExtendedTasks, this.iterationsBound,
-					this.p, this.startTime, this.pickRandom);
+					this.p, futureTimeOut, this.pickRandom);
 
 			currentSolutionCost = tempCurrent.computeCost();
 			extendedSolutionCost = tempExtended.computeCost();
@@ -188,7 +203,7 @@ public class AuctionSmart implements AuctionBehavior {
 		ArrayList<Task> extendedTasks = new ArrayList<Task>(this.taskArray);
 		extendedTasks.add(taskToAdd);
 		this.extendedSolution = this.getBestSlsSolution(agent.vehicles(), extendedTasks, this.iterationsBound, this.p,
-				this.startTime, this.pickRandom);
+				this.bidTimeout, this.pickRandom);
 
 		double currentSolutionCost = this.currentSolution.computeCost();
 		double extendedSolutionCost = this.extendedSolution.computeCost();
@@ -202,9 +217,9 @@ public class AuctionSmart implements AuctionBehavior {
 		// System.out.println("Agent " + agent.id() + " has tasks " + tasks);
 
 //		System.out.println("Start planning: " + this.taskArray);
-		long time_start = System.currentTimeMillis();
+		//long time_start = System.currentTimeMillis();
 
-		List<Plan> plans = slsPlans(vehicles, this.taskArray, iterationsBound, p, time_start, pickRandom);
+		List<Plan> plans = slsPlans(vehicles, this.taskArray, iterationsBound, p, planTimeout - 500, pickRandom);
 //		System.out.println("Done planning");
 		double cost = 0.0;
 		for (int i = 0; i < plans.size(); i++) {
@@ -251,7 +266,10 @@ public class AuctionSmart implements AuctionBehavior {
 // SLS Stuff from previous lab
 // ===================================
 	private Solution getBestSlsSolution(List<Vehicle> vehicles, ArrayList<Task> tasks, int iterationsBound, double p,
-			long startTime, boolean pickRandom) {
+			long timeOut, boolean pickRandom) {
+		
+		long startTime = System.currentTimeMillis();
+		
 		Solution currentBestSolution = new Solution(vehicles, tasks);
 		currentBestSolution.createRandomInitialSolution();
 
@@ -259,7 +277,7 @@ public class AuctionSmart implements AuctionBehavior {
 
 		int iterationCount = 0;
 		// iterate until we reach iterationsBound or we timeout
-		while (iterationCount < iterationsBound && timeOut(startTime)) {
+		while (iterationCount < iterationsBound && timeOut(startTime, timeOut)) {
 			iterationCount++;
 			// generate neigbhours of current best solution
 			List<Solution> neighbors = currentBestSolution.generateNeighbourSolutions();
@@ -307,23 +325,20 @@ public class AuctionSmart implements AuctionBehavior {
 	}
 
 	private List<Plan> slsPlans(List<Vehicle> vehicles, ArrayList<Task> tasks, int iterationsBound, double p,
-			long startTime, boolean pickRandom) {
+			long timeOut, boolean pickRandom) {
 
-		Solution bestSolution = getBestSlsSolution(vehicles, tasks, iterationsBound, p, startTime, pickRandom);
+		Solution bestSolution = getBestSlsSolution(vehicles, tasks, iterationsBound, p, timeOut, pickRandom);
 		System.out.println("# SMART TASKS with future = " + bestSolution.getTasks().size());
 		// Build logist plan for every vehicle from the actions in the best solution
 		// found
 		return this.buildAgentPlansFromSolution(vehicles, bestSolution);
 	}
 
-	private boolean timeOut(long startTime) {
-		// TODO: Change timeout_plan stuff
-		long timeout_plan = 1000;
-
+	private boolean timeOut(long startTime, long timeout) {
 		long currentTime = System.currentTimeMillis();
 		long duration = currentTime - startTime;
 		// Half of a second to build a plan
-		return duration < timeout_plan - 500;
+		return duration < timeout - 5;
 	}
 
 	public long computeBid(double marginalCost) {

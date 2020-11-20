@@ -54,7 +54,8 @@ public class AuctionSmart implements AuctionBehavior {
 	//long startTime;
 	boolean pickRandom = true;
 	int slsPredictionsSize = 10;
-	int predictedTasksCount = 2;
+	int predictedTasksCount = 5;
+	boolean minBidHigher = true;
 	
 	//TESTING
 	long bidStart = 0;
@@ -94,6 +95,7 @@ public class AuctionSmart implements AuctionBehavior {
 	@Override
 	public void auctionResult(Task previous, int winner, Long[] bids) {
 		if (winner == agent.id()) {
+			System.out.println("We won and the minBid of the other agent was higher than our marginal cost: " + this.minBidHigher);
 			this.taskArray.add(previous);
 			this.currentSolution = extendedSolution.solutionDeepCopy();
 			this.totalBidsWon += bids[winner];
@@ -111,8 +113,8 @@ public class AuctionSmart implements AuctionBehavior {
 			this.winCounts.put(winnerId, this.winCounts.getOrDefault(winnerId, 0) + 1);
 
 		}
-		long bidEnd = System.currentTimeMillis();
-		System.out.println("Bidding took: " + (bidEnd - bidStart));
+		//long bidEnd = System.currentTimeMillis();
+		//System.out.println("Bidding took: " + (bidEnd - bidStart));
 	}
 
 	@Override
@@ -131,7 +133,7 @@ public class AuctionSmart implements AuctionBehavior {
 
 		// double ratio = 1.0 + (random.nextDouble() * this.increaseRate * task.id);
 		double bid = computeBid(marginalCost);
-		System.out.println("MARGINAL = " + marginalCost + "  ::  BID = " + bid);
+		//System.out.println("MARGINAL = " + marginalCost + "  ::  BID = " + bid);
 
 		return (long) Math.round(bid);
 	}
@@ -159,11 +161,11 @@ public class AuctionSmart implements AuctionBehavior {
 		long timeLeft = bidTimeout - (endTimeMarginalCost - startTimeMarginalCost);
 		
 		long futureTimeOut = (long) ((90*timeLeft/100)/slsPredictionsSize)/2;
-		System.out.println("Time left is: " + timeLeft);
-		System.out.println("Future time out is: " + futureTimeOut);
+		//System.out.println("Time left is: " + timeLeft);
+		//System.out.println("Future time out is: " + futureTimeOut);
 		// ADD future prediction task
 		double worstMarginalCost = Double.MAX_VALUE;
-		int idCounter = 100;
+		
 		for (int i = 0; i < slsPredictionsSize; i++) {
 			ArrayList<Task> futureTasks = new ArrayList<Task>(this.taskArray);
 			ArrayList<Task> futureExtendedTasks = new ArrayList<Task>(futureTasks);
@@ -192,8 +194,8 @@ public class AuctionSmart implements AuctionBehavior {
 //		return Math.max(0, extendedSolutionCost - currentSolutionCost);
 
 		//return worstMarginalCost;
-		double bid = Math.min(marginalCost, worstMarginalCost);
-		//bid = marginalCost - (marginalCost - bid) * risk;
+		double bid = Math.max(marginalCost, worstMarginalCost);
+		//bid = marginalCost - (marginalCost - bid) * 0.1;
 		return bid;
 	}
 
@@ -229,8 +231,8 @@ public class AuctionSmart implements AuctionBehavior {
 		for (int i = 0; i < plans.size(); i++) {
 			cost += plans.get(i).totalDistance() * vehicles.get(i).costPerKm();
 		}
-		System.out.println("TOTAL SMART COST = " + cost + " TOTAL SMART PROFIT = " + (this.totalBidsWon - cost));
-		System.out.println("BIDDING HISTORY:");
+		//System.out.println("TOTAL SMART COST = " + cost + " TOTAL SMART PROFIT = " + (this.totalBidsWon - cost));
+		/*System.out.println("BIDDING HISTORY:");
 		for (int i = 0; i < this.agentsBidsHistory.size(); i++) {
 			if (i == agent.id()) {
 				System.out.println("Our agent bids are: " + this.agentsBidsHistory.get(i));
@@ -238,7 +240,7 @@ public class AuctionSmart implements AuctionBehavior {
 				System.out.println("Other agent bids are: " + this.agentsBidsHistory.get(i));
 			}
 		}
-		long time_end = System.currentTimeMillis();
+		long time_end = System.currentTimeMillis();*/
 //		long duration = time_end - time_start;
 
 		return plans;
@@ -332,7 +334,7 @@ public class AuctionSmart implements AuctionBehavior {
 			long timeOut, boolean pickRandom) {
 
 		Solution bestSolution = getBestSlsSolution(vehicles, tasks, iterationsBound, p, timeOut, pickRandom);
-		System.out.println("# SMART TASKS with future = " + bestSolution.getTasks().size());
+		//System.out.println("# SMART TASKS with future = " + bestSolution.getTasks().size());
 		// Build logist plan for every vehicle from the actions in the best solution
 		// found
 		return this.buildAgentPlansFromSolution(vehicles, bestSolution);
@@ -359,8 +361,10 @@ public class AuctionSmart implements AuctionBehavior {
 
 		//Add 30% of our marginal cost to their minBid if we bid too low
 		if (minBid > marginalCost) {
-			bid = 0.1 * marginalCost + minBid;
+			this.minBidHigher = true;
+			bid = 0.3 * marginalCost + minBid;
 		} else {
+			this.minBidHigher = false;
 			bid = marginalCost;
 		}
 

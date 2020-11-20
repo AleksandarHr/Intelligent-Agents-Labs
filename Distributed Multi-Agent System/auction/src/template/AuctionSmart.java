@@ -53,7 +53,8 @@ public class AuctionSmart implements AuctionBehavior {
 	double p = 0.3;
 	//long startTime;
 	boolean pickRandom = true;
-	int slsPredictionsSize = 15;
+	int slsPredictionsSize = 10;
+	int predictedTasksCount = 2;
 	
 	//TESTING
 	long bidStart = 0;
@@ -107,7 +108,7 @@ public class AuctionSmart implements AuctionBehavior {
 			this.agentsBidsHistory.computeIfAbsent(i, k -> new LinkedList<Long>());
 			this.agentsBidsHistory.get(i).add(newBids[i]);
 			this.winCounts.putIfAbsent(i, 0);
-			this.winCounts.put(winnerId, this.winCounts.get(winnerId) + 1);
+			this.winCounts.put(winnerId, this.winCounts.getOrDefault(winnerId, 0) + 1);
 
 		}
 		long bidEnd = System.currentTimeMillis();
@@ -157,7 +158,7 @@ public class AuctionSmart implements AuctionBehavior {
 		long endTimeMarginalCost = System.currentTimeMillis();
 		long timeLeft = bidTimeout - (endTimeMarginalCost - startTimeMarginalCost);
 		
-		long futureTimeOut = (long) ((timeLeft)/slsPredictionsSize)/2;
+		long futureTimeOut = (long) ((90*timeLeft/100)/slsPredictionsSize)/2;
 		System.out.println("Time left is: " + timeLeft);
 		System.out.println("Future time out is: " + futureTimeOut);
 		// ADD future prediction task
@@ -168,10 +169,13 @@ public class AuctionSmart implements AuctionBehavior {
 			ArrayList<Task> futureExtendedTasks = new ArrayList<Task>(futureTasks);
 			futureExtendedTasks.add(taskToAdd);
 
-			Task predictedTask = this.defaultDistribution.createTask();
-			futureTasks.add(predictedTask);
-			futureExtendedTasks.add(predictedTask);
-
+			Task predictedTask = null;
+			for (int j = 0; j < this.predictedTasksCount; j++) {
+				predictedTask = this.defaultDistribution.createTask();
+				futureTasks.add(predictedTask);
+				futureExtendedTasks.add(predictedTask);
+			}
+			
 			Solution tempCurrent = this.getBestSlsSolution(agent.vehicles(), futureTasks, this.iterationsBound, this.p,
 					futureTimeOut, this.pickRandom);
 			Solution tempExtended = this.getBestSlsSolution(agent.vehicles(), futureExtendedTasks, this.iterationsBound,
@@ -338,7 +342,7 @@ public class AuctionSmart implements AuctionBehavior {
 		long currentTime = System.currentTimeMillis();
 		long duration = currentTime - startTime;
 		// Half of a second to build a plan
-		return duration < timeout - 5;
+		return duration < (90 * timeout / 100);
 	}
 
 	public long computeBid(double marginalCost) {
@@ -355,7 +359,7 @@ public class AuctionSmart implements AuctionBehavior {
 
 		//Add 30% of our marginal cost to their minBid if we bid too low
 		if (minBid > marginalCost) {
-			bid = 0.3 * marginalCost + minBid;
+			bid = 0.1 * marginalCost + minBid;
 		} else {
 			bid = marginalCost;
 		}

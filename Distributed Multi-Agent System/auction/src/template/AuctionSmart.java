@@ -105,17 +105,15 @@ public class AuctionSmart implements AuctionBehavior {
 		// Update bookkeeping - bid history & agents' win counts
 		this.updateBidHistoryAndWinners(bids, winner);
 	}
-
+	
+	// Update bookkeeping - bid history & agents' win counts
 	private void updateBidHistoryAndWinners(Long[] newBids, int winnerId) {
 		for (int i = 0; i < newBids.length; i++) {
 			this.agentsBidsHistory.computeIfAbsent(i, k -> new LinkedList<Long>());
 			this.agentsBidsHistory.get(i).add(newBids[i]);
 			this.winCounts.putIfAbsent(i, 0);
 			this.winCounts.put(winnerId, this.winCounts.getOrDefault(winnerId, 0) + 1);
-
 		}
-		//long bidEnd = System.currentTimeMillis();
-		//System.out.println("Bidding took: " + (bidEnd - bidStart));
 	}
 
 	@Override
@@ -127,12 +125,9 @@ public class AuctionSmart implements AuctionBehavior {
 			return null;
 		}
 
-		long distanceTask = task.pickupCity.distanceUnitsTo(task.deliveryCity);
-		long distanceSum = distanceTask + currentCity.distanceUnitsTo(task.pickupCity);
-
+		// compute marginal cost of the auctioned task
 		double marginalCost = computeLessSimpleMarginalCost(task);
-
-		// double ratio = 1.0 + (random.nextDouble() * this.increaseRate * task.id);
+		// given the marginal cost, compute bid value
 		double bid = computeBid(marginalCost);
 		//System.out.println("MARGINAL = " + marginalCost + "  ::  BID = " + bid);
 
@@ -146,7 +141,6 @@ public class AuctionSmart implements AuctionBehavior {
 
 		long startTimeMarginalCost = System.currentTimeMillis();
 		long noFutureTimeOut = 2*(bidTimeout/5);
-//		this.currentSolution = this.getBestSlsSolution(agent.vehicles(), this.tasksSoFar, this.iterationsBound, this.p, this.startTime, this.pickRandom);
 		ArrayList<Task> extendedTasks = new ArrayList<Task>(this.taskArray);
 		extendedTasks.add(taskToAdd);
 		this.extendedSolution = this.getBestSlsSolution(agent.vehicles(), extendedTasks, this.iterationsBound, this.p,
@@ -155,8 +149,8 @@ public class AuctionSmart implements AuctionBehavior {
 		double currentSolutionCost = this.currentSolution.computeCost();
 		double extendedSolutionCost = this.extendedSolution.computeCost();
 
+		// Compute difference between extended solution cost and current solution cost
 		marginalCost = Math.max(0, extendedSolutionCost - currentSolutionCost);
-//
 
 		long endTimeMarginalCost = System.currentTimeMillis();
 		long timeLeft = bidTimeout - (endTimeMarginalCost - startTimeMarginalCost);
@@ -164,40 +158,40 @@ public class AuctionSmart implements AuctionBehavior {
 		long futureTimeOut = (long) ((90*timeLeft/100)/slsPredictionsSize)/2;
 		//System.out.println("Time left is: " + timeLeft);
 		//System.out.println("Future time out is: " + futureTimeOut);
-		// ADD future prediction task
 		double worstMarginalCost = Double.MAX_VALUE;
 		
-		for (int i = 0; i < slsPredictionsSize; i++) {
+		// perform slsPredictionsSize number of future tasks prediction iterations
+		for (int i = 0; i < this.slsPredictionsSize; i++) {
 			ArrayList<Task> futureTasks = new ArrayList<Task>(this.taskArray);
 			ArrayList<Task> futureExtendedTasks = new ArrayList<Task>(futureTasks);
 			futureExtendedTasks.add(taskToAdd);
 
 			Task predictedTask = null;
+			// for every prediction iteration, predict predictedTaskCount number of tasks
 			for (int j = 0; j < this.predictedTasksCount; j++) {
 				predictedTask = this.defaultDistribution.createTask();
 				futureTasks.add(predictedTask);
 				futureExtendedTasks.add(predictedTask);
 			}
 			
+			// get best SLS solutions for the extended future tasks and future tasks
 			Solution tempCurrent = this.getBestSlsSolution(agent.vehicles(), futureTasks, this.iterationsBound, this.p,
 					futureTimeOut, this.pickRandom);
 			Solution tempExtended = this.getBestSlsSolution(agent.vehicles(), futureExtendedTasks, this.iterationsBound,
 					this.p, futureTimeOut, this.pickRandom);
 
+			// compute marginal cost between the two future solutions
 			currentSolutionCost = tempCurrent.computeCost();
 			extendedSolutionCost = tempExtended.computeCost();
 			double tempMarginal = Math.max(0.0, extendedSolutionCost - currentSolutionCost);
 //			System.out.println("TEMP MARGINAL = " + tempMarginal + "  ::  MARGINAL = " + worstMarginalCost);
 			if (tempMarginal < worstMarginalCost && tempMarginal != 0.0) {
+				// keep track of the lowest such marginal cost
 				worstMarginalCost = tempMarginal;
 			}
 		}
-//		return Math.max(0, extendedSolutionCost - currentSolutionCost);
 
-		//return worstMarginalCost;
-		double bid = Math.max(marginalCost, worstMarginalCost);
-		//bid = marginalCost - (marginalCost - bid) * 0.1;
-		return bid;
+		return Math.max(marginalCost, worstMarginalCost);
 	}
 
 	// Simple computation of marginal cost - difference between extended solution
@@ -205,8 +199,6 @@ public class AuctionSmart implements AuctionBehavior {
 	public double computeSimpleMarginalCost(Task taskToAdd) {
 		double marginalCost = 0.0;
 
-		// TODO: do stuff
-//		this.currentSolution = this.getBestSlsSolution(agent.vehicles(), this.tasksSoFar, this.iterationsBound, this.p, this.startTime, this.pickRandom);
 		ArrayList<Task> extendedTasks = new ArrayList<Task>(this.taskArray);
 		extendedTasks.add(taskToAdd);
 		this.extendedSolution = this.getBestSlsSolution(agent.vehicles(), extendedTasks, this.iterationsBound, this.p,
@@ -221,28 +213,13 @@ public class AuctionSmart implements AuctionBehavior {
 	@Override
 	public List<Plan> plan(List<Vehicle> vehicles, TaskSet tasks) {
 
-		// System.out.println("Agent " + agent.id() + " has tasks " + tasks);
-
-//		System.out.println("Start planning: " + this.taskArray);
-		//long time_start = System.currentTimeMillis();
-
 		List<Plan> plans = slsPlans(vehicles, this.taskArray, iterationsBound, p, planTimeout - 500, pickRandom);
-//		System.out.println("Done planning");
-		double cost = 0.0;
-		for (int i = 0; i < plans.size(); i++) {
-			cost += plans.get(i).totalDistance() * vehicles.get(i).costPerKm();
-		}
-		System.out.println("TOTAL SMART COST = " + cost + " TOTAL SMART PROFIT = " + (this.totalBidsWon - cost));
-		/*System.out.println("BIDDING HISTORY:");
-		for (int i = 0; i < this.agentsBidsHistory.size(); i++) {
-			if (i == agent.id()) {
-				System.out.println("Our agent bids are: " + this.agentsBidsHistory.get(i));
-			} else {
-				System.out.println("Other agent bids are: " + this.agentsBidsHistory.get(i));
-			}
-		}
-		long time_end = System.currentTimeMillis();*/
-//		long duration = time_end - time_start;
+
+//		double cost = 0.0;
+//		for (int i = 0; i < plans.size(); i++) {
+//			cost += plans.get(i).totalDistance() * vehicles.get(i).costPerKm();
+//		}
+//		System.out.println("TOTAL SMART COST = " + cost + " TOTAL SMART PROFIT = " + (this.totalBidsWon - cost));
 
 		return plans;
 	}
@@ -357,11 +334,10 @@ public class AuctionSmart implements AuctionBehavior {
 
 		int idx = getBestOpponentAgentIndex();
 		
-		//Get the minimal bet of the other best agent
-		Long minBid = getOtherAgentMinBid(agentsBidsHistory.get(idx));
+		//Get the average (or minimal) bid of the other best agent
+		Long minBid = getOtherAgentMinOrAverageBid(agentsBidsHistory.get(idx), true);
 
-		//Add 30% of our marginal cost to their minBid if we bid too low
-		
+		// Make up for larger difference between our marginal cost and best agent's average/min bid if we bid too low		
 		double incr = 0.1;
 		if (this.auctionedTask != null) {
 			int tid = this.auctionedTask.id;
@@ -400,7 +376,7 @@ public class AuctionSmart implements AuctionBehavior {
 	}
 
 	//Look at 5 last bids the best agent has made and return the smallest one
-	public Long getOtherAgentMinBid(List<Long> agentBidHistory) {
+	public Long getOtherAgentMinOrAverageBid(List<Long> agentBidHistory, boolean average) {
 		double minimalBid = Double.MAX_VALUE;
 		double avgBid = 0.0;
 		int bidCount = 0;
@@ -412,8 +388,10 @@ public class AuctionSmart implements AuctionBehavior {
 				minimalBid = agentBidHistory.get(i);
 			}
 		}
-
-//		return (long) minimalBid;
-		return (long) (avgBid/bidCount);
+		
+		if (average) {
+			return (long) (avgBid/bidCount);			
+		}
+		return (long) minimalBid;
 	}
 }

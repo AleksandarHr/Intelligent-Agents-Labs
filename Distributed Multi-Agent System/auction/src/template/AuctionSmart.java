@@ -39,7 +39,8 @@ public class AuctionSmart implements AuctionBehavior {
 	private Vehicle vehicle;
 	private City currentCity;
 	private ArrayList<Task> taskArray;
-
+	private Task auctionedTask = null;
+	
 	private Solution currentSolution, extendedSolution;
 	private HashMap<Integer, List<Long>> agentsBidsHistory;
 	private HashMap<Integer, Integer> winCounts;
@@ -119,7 +120,7 @@ public class AuctionSmart implements AuctionBehavior {
 
 	@Override
 	public Long askPrice(Task task) {
-
+		this.auctionedTask = task;
 		bidStart = System.currentTimeMillis();
 		Vehicle biggestVehicle = Utils.findBiggestVehicle(this.agent.vehicles());
 		if (biggestVehicle.capacity() < task.weight) {
@@ -360,9 +361,15 @@ public class AuctionSmart implements AuctionBehavior {
 		Long minBid = getOtherAgentMinBid(agentsBidsHistory.get(idx));
 
 		//Add 30% of our marginal cost to their minBid if we bid too low
+		
+		double incr = 0.1;
+		if (this.auctionedTask != null) {
+			int tid = this.auctionedTask.id;
+			incr += Math.min(tid - 19, 0) / 200;
+		}
 		if (minBid > marginalCost) {
 			this.minBidHigher = true;
-			bid = 0.2 * marginalCost + minBid;
+			bid = incr * marginalCost + minBid;
 		} else {
 			this.minBidHigher = false;
 			bid = marginalCost;

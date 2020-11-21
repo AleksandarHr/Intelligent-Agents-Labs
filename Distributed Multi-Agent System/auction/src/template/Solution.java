@@ -55,19 +55,6 @@ public class Solution {
 		this.vehicles = vehicles;
 	}
 	
-	// Extends current solution by including the new task
-	public Solution extend(Task newTask) {
-		Solution copy = this.solutionDeepCopy();
-		
-		if (newTask != null) {
-			// TODO: add new task
-			City pickupcity = newTask.pickupCity;
-			City deliveryCity = newTask.deliveryCity;
-		}
-		
-		return copy;
-	}
-	
 	// Initial solution which assigns every task to a large enough random vehicle
 	public Solution createRandomInitialSolution() {
 		for (Task t : this.tasks) {

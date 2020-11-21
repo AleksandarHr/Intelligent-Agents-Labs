@@ -54,7 +54,7 @@ public class AuctionSmart implements AuctionBehavior {
 	//long startTime;
 	boolean pickRandom = true;
 	int slsPredictionsSize = 10;
-	int predictedTasksCount = 5;
+	int predictedTasksCount = 3;
 	boolean minBidHigher = true;
 	
 	//TESTING
@@ -231,7 +231,7 @@ public class AuctionSmart implements AuctionBehavior {
 		for (int i = 0; i < plans.size(); i++) {
 			cost += plans.get(i).totalDistance() * vehicles.get(i).costPerKm();
 		}
-		//System.out.println("TOTAL SMART COST = " + cost + " TOTAL SMART PROFIT = " + (this.totalBidsWon - cost));
+		System.out.println("TOTAL SMART COST = " + cost + " TOTAL SMART PROFIT = " + (this.totalBidsWon - cost));
 		/*System.out.println("BIDDING HISTORY:");
 		for (int i = 0; i < this.agentsBidsHistory.size(); i++) {
 			if (i == agent.id()) {
@@ -362,7 +362,7 @@ public class AuctionSmart implements AuctionBehavior {
 		//Add 30% of our marginal cost to their minBid if we bid too low
 		if (minBid > marginalCost) {
 			this.minBidHigher = true;
-			bid = 0.3 * marginalCost + minBid;
+			bid = 0.2 * marginalCost + minBid;
 		} else {
 			this.minBidHigher = false;
 			bid = marginalCost;
@@ -395,14 +395,18 @@ public class AuctionSmart implements AuctionBehavior {
 	//Look at 5 last bids the best agent has made and return the smallest one
 	public Long getOtherAgentMinBid(List<Long> agentBidHistory) {
 		double minimalBid = Double.MAX_VALUE;
-
+		double avgBid = 0.0;
+		int bidCount = 0;
 		//Check the 5 newest bids of the other agent
 		for (int i = agentBidHistory.size() - 1; i >= (agentBidHistory.size() - 1 - Math.min(5, agentBidHistory.size() - 1)); i--) {
+			avgBid += agentBidHistory.get(i);
+			bidCount++;
 			if(agentBidHistory.get(i) < minimalBid) {
 				minimalBid = agentBidHistory.get(i);
 			}
 		}
 
-		return (long) minimalBid;
+//		return (long) minimalBid;
+		return (long) (avgBid/bidCount);
 	}
 }

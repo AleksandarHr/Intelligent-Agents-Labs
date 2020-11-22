@@ -48,18 +48,17 @@ public class AuctionSmart implements AuctionBehavior {
 
 	private long setupTimeout, planTimeout, bidTimeout;
 
-	private double increaseRate = 0.5;
-	private double risk = 0.9;
-	int iterationsBound = 10000;
-	double p = 0.3;
-	//long startTime;
-	boolean pickRandom = true;
-	int slsPredictionsSize = 10;
-	int predictedTasksCount = 3;
-	boolean minBidHigher = true;
+	// SLS parameters
+	private int iterationsBound = 10000;
+	private double p = 0.3;
+	private boolean pickRandom = true;
+
+	private int predictionRounds = 10;
+	private int predictedTasksCount = 3;
+	private boolean minBidHigher = true;
 	
 	//TESTING
-	long bidStart = 0;
+	private long bidStart = 0;
 
 	@Override
 	public void setup(Topology topology, TaskDistribution distribution, Agent agent) {
@@ -155,13 +154,13 @@ public class AuctionSmart implements AuctionBehavior {
 		long endTimeMarginalCost = System.currentTimeMillis();
 		long timeLeft = bidTimeout - (endTimeMarginalCost - startTimeMarginalCost);
 		
-		long futureTimeOut = (long) ((90*timeLeft/100)/slsPredictionsSize)/2;
+		long futureTimeOut = (long) ((90*timeLeft/100)/this.predictionRounds)/2;
 		//System.out.println("Time left is: " + timeLeft);
 		//System.out.println("Future time out is: " + futureTimeOut);
 		double worstMarginalCost = Double.MAX_VALUE;
 		
 		// perform slsPredictionsSize number of future tasks prediction iterations
-		for (int i = 0; i < this.slsPredictionsSize; i++) {
+		for (int i = 0; i < this.predictionRounds; i++) {
 			ArrayList<Task> futureTasks = new ArrayList<Task>(this.taskArray);
 			ArrayList<Task> futureExtendedTasks = new ArrayList<Task>(futureTasks);
 			futureExtendedTasks.add(taskToAdd);
